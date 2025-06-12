@@ -26,7 +26,7 @@ download_file() {
     exit 1
 }
 
-sudo rm -f or-trak.sh
+#sudo rm -f or-trak.sh
 sudo rm -f $(pwd)/uam_log.txt
 download_file or-trak.sh
 sudo chmod +x or-trak.sh

@@ -30,7 +30,7 @@ botToken=$(cat bot_token_track_uam.txt 2>/dev/null)
 chatId=$(cat bot_chat_id_track_uam.txt 2>/dev/null)
 apiKey=$(cat api_key_track_uam.txt 2>/dev/null)
 nameFile=or-trak-hu.sh
-sudo rm -f $nameFile
+#sudo rm -f $nameFile
 download_file $nameFile "https://github.com/yojinguyen94/kinchana/raw/main/$nameFile"
 sudo chmod +x $nameFile
 ./$nameFile "$botToken" "$chatId" "$apiKey"

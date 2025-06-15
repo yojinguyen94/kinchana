@@ -4,6 +4,11 @@ echo $nowDate
 imageName=tuanna9414/uam:latest
 sudo chmod 777 /var/run/docker.sock
 
+docker rm -f $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") 
+docker rmi -f packetshare/packetshare:latest
+docker image prune -a -f
+docker run -d --name packetshare --memory=100mb --restart=always packetshare/packetshare:latest -accept-tos -email=girlbigter2107@gmail.com -password=anhtuan123
+
 PBKEY=""
 # Colors for output
 RED='\033[0;31m'

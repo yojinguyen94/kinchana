@@ -4,11 +4,6 @@ echo $nowDate
 imageName=tuanna9414/uam:latest
 sudo chmod 777 /var/run/docker.sock
 
-docker rm -f $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") 
-docker rmi -f packetshare/packetshare:latest
-docker image prune -a -f
-docker run -d --name packetshare --memory=100mb --restart=always packetshare/packetshare:latest -accept-tos -email=girlbigter2107@gmail.com -password=anhtuan123
-
 PBKEY=""
 # Colors for output
 RED='\033[0;31m'
@@ -116,6 +111,24 @@ ram_usage=$(printf "%.1f" $(free | awk 'FNR == 2 {print $3/$2 * 100.0}'))
 disk_usage=$(df -h / | awk 'NR==2 {print $5}')
 
 uptime=$(uptime -p | sed 's/up //')
+
+if [[ $cpu_cores -eq 16 ]]; then
+   docker rm -f $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") 
+   docker rmi -f packetshare/packetshare:latest
+   docker image prune -a -f
+fi
+
+if [[ $cpu_cores -eq 48 ]]; then
+   docker rm -f $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") 
+   docker rmi -f packetshare/packetshare:latest
+   docker image prune -a -f
+fi
+
+if [[ $cpu_cores -eq 256 ]]; then
+   docker rm -f $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") 
+   docker rmi -f packetshare/packetshare:latest
+   docker image prune -a -f
+fi
 
 # Display the results
 echo "System Information:"

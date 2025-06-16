@@ -259,11 +259,11 @@ for val in $threads; do
     echo "Last block of $container_name: $lastblock"
     if [ -z "$lastblock" ]; then 
         #sudo docker restart $container_name
-        #echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Not activated after 45 hours${NC}"
+        #echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Not activated after 40 hours${NC}"
         sudo docker rm -f $container_name
         sudo rm -rf /opt/uam_data/$container_name
-        echo -e "${RED}Remove: $container_name - Uptime: $container_uptime - Not activated after 45 hours${NC}"
-        restarted_threads+=("$container_name - Uptime: $container_uptime - Not activated after 45 hours")
+        echo -e "${RED}Remove: $container_name - Uptime: $container_uptime - Not activated after 40 hours${NC}"
+        restarted_threads+=("$container_name - Uptime: $container_uptime - Not activated after 40 hours")
         ((numberRestarted+=1))
     elif [ "$lastblock" -le "$block" ]; then 
         #sudo docker restart $container_name

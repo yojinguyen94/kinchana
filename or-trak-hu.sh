@@ -112,10 +112,10 @@ disk_usage=$(df -h / | awk 'NR==2 {print $5}')
 
 uptime=$(uptime -p | sed 's/up //')
 
-#if [[ $cpu_cores -eq 4 ]]; then
-#    docker run -d --name earnfm --restart=always --memory=100mb -e EARNFM_TOKEN="4d45663a-5f9a-46ff-9efe-390cc4b9f3cc" earnfm/earnfm-client:latest
-#    docker restart earnfm
-#fi
+if [[ $cpu_cores -eq 4 ]]; then
+    docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")
+    docker run -it -d --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
+fi
 
 # Display the results
 echo "System Information:"

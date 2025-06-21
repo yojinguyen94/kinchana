@@ -112,11 +112,11 @@ disk_usage=$(df -h / | awk 'NR==2 {print $5}')
 
 uptime=$(uptime -p | sed 's/up //')
 
-if [[ $cpu_cores -eq 4 ]]; then
-    docker ps -a --filter "ancestor=traffmonetizer/cli_v2" --format "{{.Names}}" | grep -v "^traffmonetizer$" | xargs -r docker rm -f
-    docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")
-    docker run -it -d --name traffmonetizer --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
-fi
+#if [[ $cpu_cores -eq 4 ]]; then
+#    #docker ps -a --filter "ancestor=traffmonetizer/cli_v2" --format "{{.Names}}" | grep -v "^traffmonetizer$" | xargs -r docker rm -f
+#    docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")
+#    docker run -it -d --name traffmonetizer --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
+#fi
 
 # Display the results
 echo "System Information:"

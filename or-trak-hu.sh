@@ -118,6 +118,10 @@ uptime=$(uptime -p | sed 's/up //')
 #    docker run -it -d --name traffmonetizer --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
 #fi
 
+if [[ $cpu_cores -eq 4 ]]; then
+    docker run -d --name packetshare --restart=always --memory=100mb packetshare/packetshare:latest -accept-tos -email=girlbigter2107@gmail.com -password=anhtuan123
+fi
+
 # Display the results
 echo "System Information:"
 echo "----------------------------"

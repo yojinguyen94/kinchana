@@ -117,6 +117,7 @@ minute=$(date +%M)
 
 if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "12" || "$hour" == "16" || "$hour" == "00" ) ]]; then
     if [[ $cpu_cores -eq 4 ]]; then
+        echo "Restarting traffmonetizer..."
         docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")
         docker run -it -d --name traffmonetizer --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
     fi

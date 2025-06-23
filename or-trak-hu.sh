@@ -197,7 +197,7 @@ fi
 echo $currentblock > lastBlock.txt
 
 echo -e "${GREEN}Current Block: $currentblock${NC}"
-block=$((currentblock - 16))
+block=$((currentblock - 14))
 totalThreads=$(docker ps | grep $imageName | wc -l)
 oldTotalThreads=$totalThreads
 setNewThreadUAM=0

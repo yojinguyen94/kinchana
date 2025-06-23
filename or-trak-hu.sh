@@ -205,7 +205,7 @@ setNewThreadUAM=0
 echo "PBKEY: $PBKEY"
 echo "Total Threads: $totalThreads"
 
-if [[ $cpu_cores -eq 4 && $totalThreads -ge 2 ]]; then
+if [[ $cpu_cores -eq 4 && $totalThreads -ge 2 && "$ISP" != "Secured Servers LLC" ]]; then
     # Loop through 2 to $totalThreads and remove the containers
     for i in $(seq 2 $totalThreads); do
       echo "Removing container: uam_$i"

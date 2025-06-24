@@ -115,11 +115,11 @@ uptime=$(uptime -p | sed 's/up //')
 hour=$(date +%H)
 minute=$(date +%M)
 
-if docker logs $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") --tail 30 2>&1 | grep -q "Your device limit has been reached"; then
-    echo "❌ Packetshare giới hạn thiết bị đã bị vượt!"
+if docker logs $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") --tail 30 2>&1 | grep -qE "Your device limit has been reached|Device amounts exceed"; then
+    echo "❌ Packetshare device limit has been exceeded!"
     docker rm -f $(docker ps -aq -f "ancestor=packetshare/packetshare:latest")
 else
-    echo "✅ Packetshare không có lỗi device limit"
+    echo "✅ Packetshare is not encountering any device limit errors."
 fi
 
 if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "12" || "$hour" == "16" || "$hour" == "00" ) ]]; then

@@ -52,10 +52,10 @@ send_telegram() {
 
         # Check if the response contains "ok":true
         if [[ "$response" == *'"ok":true'* ]]; then
-            echo "✅ Telegram message sent successfully."
+            echo "$UTC_NOW [$ZONE - $HOUR] ✅ Telegram message sent successfully." >> "$LOG"
             break  # success
         fi
-        echo "❌ Attempt $attempt failed to send Telegram notification. Retrying in $retry_delay seconds..."
+        echo "$UTC_NOW [$ZONE - $HOUR] ❌ Attempt $attempt failed to send Telegram notification. Retrying in $retry_delay seconds..." >> "$LOG"
         sleep "$retry_delay"
         ((attempt++))
     done
@@ -89,7 +89,7 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
 
   echo "$UTC_NOW [$ZONE - $HOUR] ✅ Running simulate_oci_user.sh" >> "$LOG"
   bash /home/ubuntu/simulate_oci_user.sh
-
+  echo "$UTC_NOW [$ZONE - $HOUR] ✅ Done simulate_oci_user.sh" >> "$LOG"
   LOG_CONTENT=$(awk -v d="$(date -d '-5 minutes' '+%Y-%m-%d %H:%M:%S')" '$0 > d' "$JSON_LOG" | tail -n 20)
 
   MSG="🟢 *OCI Activity Simulation Triggered*

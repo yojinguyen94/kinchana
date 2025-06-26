@@ -6,8 +6,25 @@ CHAT_ID="$3"
 LOG="/home/ubuntu/oci-activity-logs/run_random_time.log"
 JSON_LOG="/home/ubuntu/oci-activity-logs/oci_activity_log.json"
 UTC_NOW=$(date -u '+%F %T')
-HOSTNAME=$(hostname)
 STATE_FILE="/tmp/oci_random_state_$ZONE"
+
+# Fetch public IP and ISP info from ip-api
+max_ip_retries=20
+ip_attempt=0
+
+while (( ip_attempt < max_ip_retries )); do
+    response=$(curl -s --fail http://ip-api.com/json)
+    
+    if [[ $? -eq 0 ]]; then
+       break  # Exit script if successful
+    fi
+
+    ((ip_attempt++))
+    echo "Attempt $ip_attempt/$max_ip_retries failed to fetch public IP and ISP info from ip-api. Retrying in 2 seconds..."
+    sleep 2
+done
+
+PUBLIC_IP=$(echo "$response" | grep -oP '"query":\s*"\K[^"]+')
 
 get_hour_by_zone() {
   case "$ZONE" in
@@ -57,13 +74,13 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
 
   LOG_CONTENT=$(awk -v d="$(date -d '-5 minutes' '+%Y-%m-%d %H:%M:%S')" '$0 > d' "$JSON_LOG" | tail -n 20)
 
-  MSG="\U0001F7E2 *OCI Activity Simulation Triggered*
+  MSG="🟢 *OCI Activity Simulation Triggered*
 *Zone:* $ZONE
 *Local Hour:* $HOUR
 *UTC:* $UTC_NOW
-*Host:* $HOSTNAME
+*IP:* $PUBLIC_IP
 
-\U0001F4CB *Recent Log (last 5m):*
+📋 *Recent Log (last 5m):*
 \`\`\`json
 $LOG_CONTENT
 \`\`\`"

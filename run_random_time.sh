@@ -67,6 +67,9 @@ send_telegram() {
         else
           local text_send="$MSG
           📋 Recent Log (last 5m):
+          \\\json
+          $LOG_CONTENT
+          \\\"
           "
           response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
             -d chat_id="$CHAT_ID" \

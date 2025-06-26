@@ -37,11 +37,27 @@ get_hour_by_zone() {
 }
 
 send_telegram() {
-  local msg=$1
-  curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-    -d chat_id="$CHAT_ID" \
-    -d parse_mode="Markdown" \
-    -d text="$msg" > /dev/null 2>&1
+    local msg="$1"
+    local max_retries=30
+    local retry_delay=3  # seconds
+    local attempt=1
+    local response
+
+    while (( attempt <= max_retries )); do
+        response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+            -d chat_id="$CHAT_ID" \
+            -d parse_mode="Markdown" \
+            -d text="$msg")
+
+        # Check if the response contains "ok":true
+        if [[ "$response" == *'"ok":true'* ]]; then
+            echo "✅ Telegram message sent successfully."
+            break  # success
+        fi
+        echo "❌ Attempt $attempt failed to send Telegram notification. Retrying in $retry_delay seconds..."
+        sleep "$retry_delay"
+        ((attempt++))
+    done
 }
 
 # Get local hour and date
@@ -70,7 +86,7 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
   fi
 
   echo "$UTC_NOW [$ZONE - $HOUR] ✅ Running simulate_oci_user.sh" >> "$LOG"
-  bash /home/ubuntu/simulate_oci_user.sh
+  #bash /home/ubuntu/simulate_oci_user.sh
 
   LOG_CONTENT=$(awk -v d="$(date -d '-5 minutes' '+%Y-%m-%d %H:%M:%S')" '$0 > d' "$JSON_LOG" | tail -n 20)
 

@@ -78,10 +78,10 @@ $logcontent
 
         # Check if the response contains "ok":true
         if [[ "$response" == *'"ok":true'* ]]; then
-            echo "$UTC_NOW [$ZONE - $HOUR] ✅ Telegram message sent successfully." >> "$LOG"
+            echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ✅ Telegram message sent successfully." >> "$LOG"
             break  # success
         fi
-        echo "$UTC_NOW [$ZONE - $HOUR] ❌ Attempt $attempt failed to send Telegram notification. Retrying in $retry_delay seconds..." >> "$LOG"
+        echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ❌ Attempt $attempt failed to send Telegram notification. Retrying in $retry_delay seconds..." >> "$LOG"
         echo "$response" >> "$LOG"
         sleep "$retry_delay"
         ((attempt++))
@@ -108,15 +108,15 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" 
     LAST_RUN_TS=$(stat -c %Y "$STATE_FILE")
     NOW_TS=$(date +%s)
     if (( NOW_TS - LAST_RUN_TS < 3600 )); then
-      echo "$UTC_NOW [$ZONE - $HOUR] ⏭ Skipped (cooldown < 1h)" >> "$LOG"
+      echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ⏭ Skipped (cooldown < 1h)" >> "$LOG"
       echo "$LOG"
       exit 0
     fi
   fi
 
-  echo "$UTC_NOW [$ZONE - $HOUR] ✅ Running simulate_oci_user.sh" >> "$LOG"
+  echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ✅ Running simulate_oci_user.sh" >> "$LOG"
   bash /home/ubuntu/simulate_oci_user.sh
-  echo "$UTC_NOW [$ZONE - $HOUR] ✅ Done simulate_oci_user.sh" >> "$LOG"
+  echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ✅ Done simulate_oci_user.sh" >> "$LOG"
   LOG_CONTENT=$(awk -v d="$(date -d '-30 minutes' '+%Y-%m-%d %H:%M:%S')" '$0 > d' "$JSON_LOG" | tail -n 15)
 
   send_telegram "$LOG_CONTENT"
@@ -126,6 +126,6 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" 
   echo "LAST_RUN_DATE=\"$DATE\"" > "$STATE_FILE"
   echo "RUN_COUNT=$RUN_COUNT" >> "$STATE_FILE"
 else
-  echo "$UTC_NOW [$ZONE - $HOUR] ⏭ Skipped (outside working hours or limit reached)" >> "$LOG"
+  echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ⏭ Skipped (outside working hours or limit reached)" >> "$LOG"
   echo "$LOG"
 fi

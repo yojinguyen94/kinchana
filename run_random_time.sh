@@ -49,6 +49,7 @@ send_telegram() {
  *Zone:* $ZONE
  *Local Hour:* $HOUR
  *UTC:* $UTC_NOW
+ *Run Count:* $RUN_COUNT
  *IP:* $PUBLIC_IP
 ----------------------------"
     while (( attempt <= max_retries )); do
@@ -119,12 +120,12 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" 
   echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ✅ Done simulate_oci_user.sh" >> "$LOG"
   LOG_CONTENT=$(awk -v d="$(date -d '-30 minutes' '+%Y-%m-%d %H:%M:%S')" '$0 > d' "$JSON_LOG" | tail -n 15)
 
-  send_telegram "$LOG_CONTENT"
-
   # Update state file
   RUN_COUNT=$((RUN_COUNT + 1))
   echo "LAST_RUN_DATE=\"$DATE\"" > "$STATE_FILE"
   echo "RUN_COUNT=$RUN_COUNT" >> "$STATE_FILE"
+
+  send_telegram "$LOG_CONTENT"
 else
   echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ⏭ Skipped (outside working hours or limit reached)" >> "$LOG"
   echo "$LOG"

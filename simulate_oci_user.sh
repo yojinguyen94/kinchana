@@ -28,7 +28,7 @@ fi
 
 # === Logging ===
 log_action() {
-  local timestamp="$1"
+  local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   local action="$2"
   local description="$3"
   local status="$4"

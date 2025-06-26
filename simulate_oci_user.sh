@@ -181,3 +181,4 @@ done
 
 echo "✅ OCI simulation done: $COUNT job(s) run"
 echo "✅ Log saved to: $CSV_LOG and $JSON_LOG"
+log_action "$TIMESTAMP" "✅ OCI simulation done: $COUNT job(s) run"

@@ -40,16 +40,34 @@ get_hour_by_zone() {
   esac
 }
 
+escape_markdown() {
+  echo "$1" | sed -e 's/\\/\\\\/g' \
+                  -e 's/\*/\\*/g' \
+                  -e 's/_/\\_/g' \
+                  -e 's/\[/\\[/g' \
+                  -e 's/\]/\\]/g' \
+                  -e 's/(/\\(/g' \
+                  -e 's/)/\\)/g' \
+                  -e 's/`/\\`/g' \
+                  -e 's/>/\\>/g' \
+                  -e 's/#/\\#/g' \
+                  -e 's/\+/\\+/g' \
+                  -e 's/-/\\-/g' \
+                  -e 's/=/\\=/g' \
+                  -e 's/!/\\!/g' \
+                  -e 's/\./\\./g'
+}
+
 send_telegram() {
     local logcontent="$1"
     local max_retries=30
     local retry_delay=3  # seconds
     local attempt=1
     local response
-
+    ZONE_ESC=$(escape_markdown "$ZONE")
     local MSG="🟢 *OCI Activity Simulation Triggered*
 ----------------------------
- *Zone:* $ZONE
+ *Zone:* $ZONE_ESC
  *Local Hour:* $HOUR
  *UTC:* $UTC_NOW
  *Run Count:* $RUN_COUNT

@@ -92,10 +92,10 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
 
   MSG="🟢 *OCI Activity Simulation Triggered*
   ----------------------------
-*Zone:* $ZONE
-*Local Hour:* $HOUR
-*UTC:* $UTC_NOW
-*IP:* $PUBLIC_IP
+  *Zone:* $ZONE
+  *Local Hour:* $HOUR
+  *UTC:* $UTC_NOW
+  *IP:* $PUBLIC_IP
 ----------------------------
 📋 *Recent Log (last 5m):*
 \`\`\`json

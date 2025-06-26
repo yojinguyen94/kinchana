@@ -7,6 +7,7 @@ LOG="/home/ubuntu/oci-activity-logs/run_random_time.log"
 JSON_LOG="/home/ubuntu/oci-activity-logs/oci_activity_log.json"
 UTC_NOW=$(date -u '+%F %T')
 STATE_FILE="/tmp/oci_random_state_$ZONE"
+RANDOM_CHANCE=$(( RANDOM % 3 ))
 
 # Fetch public IP and ISP info from ip-api
 max_ip_retries=20
@@ -74,7 +75,7 @@ if [ "$LAST_RUN_DATE" != "$DATE" ]; then
   RUN_COUNT=0
 fi
 
-if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
+if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" -eq 0 ]]; then
   # Enforce 1-hour cooldown
   if [ -f "$STATE_FILE" ]; then
     LAST_RUN_TS=$(stat -c %Y "$STATE_FILE")

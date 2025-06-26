@@ -98,7 +98,7 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" 
   *Local Hour:* $HOUR
   *UTC:* $UTC_NOW
   *IP:* $PUBLIC_IP
-----------------------------
+  ----------------------------
 📋 *Recent Log (last 5m):*
 \`\`\`json
 $LOG_CONTENT

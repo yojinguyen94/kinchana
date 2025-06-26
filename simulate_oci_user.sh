@@ -49,15 +49,15 @@ run_job() {
   case "$1" in
     job1_list_iam)
       log_action "$TIMESTAMP" "info" "List IAM info" "start"
-      sleep_random 1 2
+      sleep_random 1 10
       oci iam region-subscription list && log_action "$TIMESTAMP" "region" "List region subscription" "success"
-      sleep_random 1 2
+      sleep_random 1 20
       oci iam availability-domain list && log_action "$TIMESTAMP" "availability-domain" "List availability domains" "success"
       ;;
 
     job2_check_quota)
       AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
-      sleep_random 1 2
+      sleep_random 1 30
       oci limits resource-availability get --service-name compute \
         --limit-name standard-e2-core-count \
         --availability-domain "$AD" \
@@ -68,17 +68,17 @@ run_job() {
       BUCKET="bucket-test-$DAY-$RANDOM"
       log_action "$TIMESTAMP" "bucket-create" "Creating bucket $BUCKET" "start"
       EXP_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 5 + 3)) days")
-      sleep_random 1 2
+      sleep_random 1 60
       oci os bucket create --name "$BUCKET" --compartment-id "$TENANCY_OCID" \
         --defined-tags "{\"auto\":{\"auto-delete\":\"true\",\"auto-delete-date\":\"$EXP_DATE\"}}" \
         && log_action "$TIMESTAMP" "bucket-create" "Created bucket with auto-delete" "success"
 
       echo "hello world $(date)" > test.txt
-      sleep_random 1 2
+      sleep_random 1 30
       oci os object put --bucket-name "$BUCKET" --file test.txt && log_action "$TIMESTAMP" "upload" "Uploaded test.txt" "success"
-      sleep_random 1 2
+      sleep_random 1 80
       oci os object delete --bucket-name "$BUCKET" --name test.txt --force && log_action "$TIMESTAMP" "delete-object" "Deleted test.txt" "success"
-      sleep_random 1 2
+      sleep_random 1 90
       oci os bucket delete --bucket-name "$BUCKET" --force && log_action "$TIMESTAMP" "bucket-delete" "Deleted bucket" "success"
       rm -f test.txt
       ;;
@@ -95,18 +95,18 @@ run_job() {
         if [[ "$DELETE_DATE" < "$NOW_DATE" ]]; then
           oci os bucket delete --bucket-name "$NAME" --force
           log_action "$TIMESTAMP" "auto-delete" "Deleted bucket $NAME expired on $DELETE_DATE" "success"
-          sleep_random 1 2
+          sleep_random 1 30
         fi
       done
       ;;
 
     job5_list_resources)
       log_action "$TIMESTAMP" "resource-view" "List common resources" "start"
-      sleep_random 1 2
+      sleep_random 1 30
       oci network vcn list --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "vcn-list" "List VCNs" "success"
-      sleep_random 1 2
+      sleep_random 1 90
       oci network subnet list --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "subnet-list" "List subnets" "success"
-      sleep_random 1 2
+      sleep_random 1 60
       oci compute image list --compartment-id "$TENANCY_OCID" --all --query 'data[0:3].{name:"display-name"}' && log_action "$TIMESTAMP" "image-list" "List images" "success"
       ;;
   esac
@@ -130,7 +130,7 @@ SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
 for i in $(seq 1 $COUNT); do
   run_job "${SHUFFLED[$((i-1))]}"
-  sleep_random 3 10
+  sleep_random 3 20
 done
 
 echo "✅ OCI simulation done: $COUNT job(s) run"

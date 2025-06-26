@@ -39,16 +39,27 @@ get_hour_by_zone() {
 
 send_telegram() {
     local msg="$1"
+    local logcontent="$2"
     local max_retries=30
     local retry_delay=3  # seconds
     local attempt=1
     local response
 
     while (( attempt <= max_retries )); do
-        response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+        # If the log is too long, send it as a file
+        if [ ${#MSG} -gt 4096 ]; then
+          echo "$LOG_CONTENT" > /tmp/log_output.json
+          response=$(curl -F chat_id="$CHAT_ID" \
+               -F document=@/tmp/log_output.json \
+               -F caption="📝 *OCI Activity Simulation*\nLog is too long, sending as a file instead." \
+               "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument")
+          rm -f /tmp/log_output.json
+        else
+          response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
             -d chat_id="$CHAT_ID" \
             -d parse_mode="Markdown" \
             -d text="$msg")
+        fi
 
         # Check if the response contains "ok":true
         if [[ "$response" == *'"ok":true'* ]]; then
@@ -105,7 +116,7 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
 $LOG_CONTENT
 \`\`\`"
 
-  send_telegram "$MSG"
+  send_telegram "$MSG" "$LOG_CONTENT"
 
   # Update state file
   RUN_COUNT=$((RUN_COUNT + 1))

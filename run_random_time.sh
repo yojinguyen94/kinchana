@@ -22,32 +22,34 @@ get_hour_by_zone() {
 send_telegram() {
   local msg=$1
   curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-  -d chat_id="$CHAT_ID" \
-  -d parse_mode="Markdown" \
-  -d text="$msg"
+    -d chat_id="$CHAT_ID" \
+    -d parse_mode="Markdown" \
+    -d text="$msg"
 }
 
-# Run only during working hours 9-18 and if not too frequent
+# Get local hour and date
 HOUR=$(get_hour_by_zone)
 DATE=$(date +%Y-%m-%d)
 
+# Load previous state
 if [ -f "$STATE_FILE" ]; then
   source "$STATE_FILE"
 fi
 
+# Reset counter if new day
 if [ "$LAST_RUN_DATE" != "$DATE" ]; then
-  echo "LAST_RUN_DATE=\"$DATE\"" > "$STATE_FILE"
-  echo "RUN_COUNT=0" >> "$STATE_FILE"
   RUN_COUNT=0
 fi
 
 if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
-  # Enforce minimum 1 hour between runs
-  LAST_RUN_TS=$(stat -c %Y "$STATE_FILE")
-  NOW_TS=$(date +%s)
-  if (( NOW_TS - LAST_RUN_TS < 3600 )); then
-    echo "$UTC_NOW [$ZONE - $HOUR] ⏭ Skipped (cooldown < 1h)" >> "$LOG"
-    exit 0
+  # Enforce 1-hour cooldown
+  if [ -f "$STATE_FILE" ]; then
+    LAST_RUN_TS=$(stat -c %Y "$STATE_FILE")
+    NOW_TS=$(date +%s)
+    if (( NOW_TS - LAST_RUN_TS < 3600 )); then
+      echo "$UTC_NOW [$ZONE - $HOUR] ⏭ Skipped (cooldown < 1h)" >> "$LOG"
+      exit 0
+    fi
   fi
 
   echo "$UTC_NOW [$ZONE - $HOUR] ✅ Running simulate_oci_user.sh" >> "$LOG"
@@ -67,6 +69,8 @@ $LOG_CONTENT
 \`\`\`"
 
   send_telegram "$MSG"
+
+  # Update state file
   RUN_COUNT=$((RUN_COUNT + 1))
   echo "LAST_RUN_DATE=\"$DATE\"" > "$STATE_FILE"
   echo "RUN_COUNT=$RUN_COUNT" >> "$STATE_FILE"

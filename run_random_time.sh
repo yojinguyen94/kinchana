@@ -3,11 +3,14 @@
 ZONE="$1"
 BOT_TOKEN="$2"
 CHAT_ID="$3"
-LOG="/home/ubuntu/oci-activity-logs/run_random_time.log"
-JSON_LOG="/home/ubuntu/oci-activity-logs/oci_activity_log.json"
+LOG_DIR="$HOME/oci-activity-logs"
+LOG="$LOG_DIR/run_random_time.log"
+JSON_LOG="$LOG_DIR/oci_activity_log.json"
 UTC_NOW=$(date -u '+%F %T')
 STATE_FILE="/tmp/oci_random_state_$ZONE"
 RANDOM_CHANCE=$(( RANDOM % 3 ))
+
+mkdir -p "$LOG_DIR"
 
 # Fetch public IP and ISP info from ip-api
 max_ip_retries=20

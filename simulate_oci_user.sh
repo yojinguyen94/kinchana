@@ -44,18 +44,20 @@ sleep_random() {
   sleep "$sec"
 }
 
-# Tạo namespace auto nếu chưa có
-TAG_NAMESPACE_ID=$(oci iam tag-namespace list --compartment-id "$TENANCY_OCID" \
-  --query "data[?name=='auto'].id | [0]" --raw-output)
-
-if [ -z "$TAG_NAMESPACE_ID" ]; then
-  TAG_NAMESPACE_ID=$(oci iam tag-namespace create \
-    --compartment-id "$TENANCY_OCID" \
-    --name "auto" \
-    --description "Auto delete simulation" \
-    --query "data.id" --raw-output)
-  log_action "$TIMESTAMP" "tag-namespace" "Created tag namespace auto" "success"
-fi
+ensure_namespace_auto() {
+  # Tạo namespace auto nếu chưa có
+  TAG_NAMESPACE_ID=$(oci iam tag-namespace list --compartment-id "$TENANCY_OCID" \
+    --query "data[?name=='auto'].id | [0]" --raw-output)
+  
+  if [ -z "$TAG_NAMESPACE_ID" ]; then
+    TAG_NAMESPACE_ID=$(oci iam tag-namespace create \
+      --compartment-id "$TENANCY_OCID" \
+      --name "auto" \
+      --description "Auto delete simulation" \
+      --query "data.id" --raw-output)
+    log_action "$TIMESTAMP" "tag-namespace" "Created tag namespace auto" "success"
+  fi
+}
 
 ensure_tag() {
   local TAG_NAME="$1"
@@ -71,9 +73,6 @@ ensure_tag() {
     log_action "$TIMESTAMP" "tag" "Created tag $TAG_NAME" "success"
   fi
 }
-
-ensure_tag "auto-delete" "Mark for auto deletion"
-ensure_tag "auto-delete-date" "Scheduled auto delete date"
 
 # === Run a single job ===
 run_job() {
@@ -96,6 +95,9 @@ run_job() {
       ;;
 
     job3_bucket_test)
+      ensure_namespace_auto
+      ensure_tag "auto-delete" "Mark for auto deletion"
+      ensure_tag "auto-delete-date" "Scheduled auto delete date"
       BUCKET="bucket-test-$DAY-$RANDOM"
       DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7 + 3)) days")
       log_action "$TIMESTAMP" "bucket-create" "Creating bucket $BUCKET with auto-delete" "start"
@@ -127,6 +129,9 @@ run_job() {
       ;;
 
     job4_cleanup_auto_delete)
+      ensure_namespace_auto
+      ensure_tag "auto-delete" "Mark for auto deletion"
+      ensure_tag "auto-delete-date" "Scheduled auto delete date"
       log_action "$TIMESTAMP" "auto-delete-scan" "Scanning for expired buckets with auto-delete=true" "start"
       TODAY=$(date +%Y-%m-%d)
       BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \

@@ -105,13 +105,17 @@ run_job() {
         --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
         && log_action "$TIMESTAMP" "bucket-create" "Created $BUCKET with auto-delete-date=$DELETE_DATE" "success" \
         || log_action "$TIMESTAMP" "bucket-create" "Failed to create $BUCKET" "fail"
-      echo "test $(date)" > test.txt
-      oci os object put --bucket-name "$BUCKET" --file test.txt \
-        && log_action "$TIMESTAMP" "upload" "Uploaded test.txt to $BUCKET" "success" \
+      filetest="test-$DAY-$RANDOM.txt"
+      echo "test $(date)" > $filetest
+      sleep_random 1 10
+      oci os object put --bucket-name "$BUCKET" --file $filetest \
+        && log_action "$TIMESTAMP" "upload" "Uploaded $filetest to $BUCKET" "success" \
         || log_action "$TIMESTAMP" "upload" "Failed to upload to $BUCKET" "fail"
-      oci os object delete --bucket-name "$BUCKET" --name test.txt --force \
-        && log_action "$TIMESTAMP" "delete-object" "Deleted test.txt from $BUCKET" "success" \
-        || log_action "$TIMESTAMP" "delete-object" "Failed to delete test.txt from $BUCKET" "fail"
+      sleep_random 1 20
+      oci os object delete --bucket-name "$BUCKET" --name $filetest --force \
+        && log_action "$TIMESTAMP" "delete-object" "Deleted $filetest from $BUCKET" "success" \
+        || log_action "$TIMESTAMP" "delete-object" "Failed to delete $filetest from $BUCKET" "fail"
+      sleep_random 1 20
       if oci os bucket get --bucket-name "$BUCKET" &>/dev/null; then
         oci os bucket delete --bucket-name "$BUCKET" --force \
           && log_action "$TIMESTAMP" "bucket-delete" "Deleted bucket $BUCKET" "success" \
@@ -119,7 +123,7 @@ run_job() {
       else
         log_action "$TIMESTAMP" "bucket-delete" "Bucket $BUCKET does not exist" "fail"
       fi
-      rm -f test.txt
+      rm -f $filetest
       ;;
 
     job4_cleanup_auto_delete)
@@ -132,6 +136,7 @@ run_job() {
         DELETE_DATE=$(oci os bucket get --bucket-name "$b" \
           --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           --raw-output 2>/dev/null)
+        sleep_random 1 10
         if [[ "$DELETE_DATE" < "$TODAY" ]]; then
           if oci os bucket get --bucket-name "$b" &>/dev/null; then
             oci os bucket delete --bucket-name "$b" --force \

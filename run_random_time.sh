@@ -56,6 +56,7 @@ send_telegram() {
             break  # success
         fi
         echo "$UTC_NOW [$ZONE - $HOUR] ❌ Attempt $attempt failed to send Telegram notification. Retrying in $retry_delay seconds..." >> "$LOG"
+        echo "$response" >> "$LOG"
         sleep "$retry_delay"
         ((attempt++))
     done

@@ -45,20 +45,20 @@ send_telegram() {
     local response
 
     local MSG="🟢 *OCI Activity Simulation Triggered*
-    ----------------------------
-     *Zone:* $ZONE
-     *Local Hour:* $HOUR
-     *UTC:* $UTC_NOW
-     *IP:* $PUBLIC_IP
-    ----------------------------
-    "
+----------------------------
+ *Zone:* $ZONE
+ *Local Hour:* $HOUR
+ *UTC:* $UTC_NOW
+ *IP:* $PUBLIC_IP
+----------------------------
+"
     while (( attempt <= max_retries )); do
         # If the log is too long, send it as a file
         if [ ${#logcontent} -gt 4096 ]; then
           echo "$logcontent" > /tmp/log_output.json
           local CAPTION="$MSG
-          📄 Log is too long, sending as a file instead.
-          "
+📄 Log is too long, sending as a file instead.
+"
           response=$(curl -F chat_id="$CHAT_ID" \
                -F document=@/tmp/log_output.json \
                -F caption="$CAPTION" \
@@ -66,11 +66,11 @@ send_telegram() {
           rm -f /tmp/log_output.json
         else
           local text_send="$MSG
-          📋 *Recent Log (last 5m):*
-           \`\`\`json
-           $logcontent
-           \`\`\`
-          "
+📋 *Recent Log (last 5m):*
+\`\`\`json
+$logcontent
+\`\`\`
+"
           response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
             -d chat_id="$CHAT_ID" \
             -d parse_mode="Markdown" \

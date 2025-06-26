@@ -20,7 +20,11 @@ get_hour_by_zone() {
 }
 
 send_telegram() {
-  /home/ubuntu/send_telegram.sh "$1"
+  local msg=$1
+  curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+  -d chat_id="$CHAT_ID" \
+  -d parse_mode="Markdown" \
+  -d text="$msg"
 }
 
 # Run only during working hours 9-18 and if not too frequent
@@ -69,8 +73,3 @@ $LOG_CONTENT
 else
   echo "$UTC_NOW [$ZONE - $HOUR] ⏭ Skipped (outside working hours or limit reached)" >> "$LOG"
 fi
-
-curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-  -d chat_id="$CHAT_ID" \
-  -d parse_mode="Markdown" \
-  -d text="$MSG"

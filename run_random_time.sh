@@ -86,16 +86,17 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
   fi
 
   echo "$UTC_NOW [$ZONE - $HOUR] ✅ Running simulate_oci_user.sh" >> "$LOG"
-  #bash /home/ubuntu/simulate_oci_user.sh
+  bash /home/ubuntu/simulate_oci_user.sh
 
   LOG_CONTENT=$(awk -v d="$(date -d '-5 minutes' '+%Y-%m-%d %H:%M:%S')" '$0 > d' "$JSON_LOG" | tail -n 20)
 
   MSG="🟢 *OCI Activity Simulation Triggered*
+  ----------------------------
 *Zone:* $ZONE
 *Local Hour:* $HOUR
 *UTC:* $UTC_NOW
 *IP:* $PUBLIC_IP
-
+----------------------------
 📋 *Recent Log (last 5m):*
 \`\`\`json
 $LOG_CONTENT

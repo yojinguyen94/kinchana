@@ -50,8 +50,7 @@ send_telegram() {
  *Local Hour:* $HOUR
  *UTC:* $UTC_NOW
  *IP:* $PUBLIC_IP
-----------------------------
-"
+----------------------------"
     while (( attempt <= max_retries )); do
         # If the log is too long, send it as a file
         if [ ${#logcontent} -gt 4096 ]; then

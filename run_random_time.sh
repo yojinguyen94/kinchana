@@ -48,7 +48,7 @@ send_telegram() {
     while (( attempt <= max_retries )); do
         # If the log is too long, send it as a file
         if [ ${#MSG} -gt 4096 ]; then
-          echo "$LOG_CONTENT" > /tmp/log_output.json
+          echo "$logcontent" > /tmp/log_output.json
           response=$(curl -F chat_id="$CHAT_ID" \
                -F document=@/tmp/log_output.json \
                -F caption="📝 *OCI Activity Simulation*\nLog is too long, sending as a file instead." \

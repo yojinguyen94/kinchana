@@ -68,7 +68,7 @@ send_telegram() {
           local text_send="$MSG
           📋 *Recent Log (last 5m):*
            \`\`\`json
-           $LOG_CONTENT
+           $logcontent
            \`\`\`
           "
           response=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \

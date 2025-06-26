@@ -44,6 +44,37 @@ sleep_random() {
   sleep "$sec"
 }
 
+# Tạo namespace auto nếu chưa có
+TAG_NAMESPACE_ID=$(oci iam tag-namespace list --compartment-id "$TENANCY_OCID" \
+  --query "data[?name=='auto'].id | [0]" --raw-output)
+
+if [ -z "$TAG_NAMESPACE_ID" ]; then
+  TAG_NAMESPACE_ID=$(oci iam tag-namespace create \
+    --compartment-id "$TENANCY_OCID" \
+    --name "auto" \
+    --description "Auto delete simulation" \
+    --query "data.id" --raw-output)
+  log_action "$TIMESTAMP" "tag-namespace" "Created tag namespace auto" "success"
+fi
+
+ensure_tag() {
+  local TAG_NAME="$1"
+  local DESC="$2"
+  EXISTS=$(oci iam tag list --tag-namespace-id "$TAG_NAMESPACE_ID" \
+    --query "data[?name=='$TAG_NAME'].id | [0]" --raw-output)
+  if [ -z "$EXISTS" ]; then
+    oci iam tag create \
+      --tag-namespace-id "$TAG_NAMESPACE_ID" \
+      --name "$TAG_NAME" \
+      --description "$DESC" \
+      --is-cost-tracking false > /dev/null
+    log_action "$TIMESTAMP" "tag" "Created tag $TAG_NAME" "success"
+  fi
+}
+
+ensure_tag "auto-delete" "Mark for auto deletion"
+ensure_tag "auto-delete-date" "Scheduled auto delete date"
+
 # === Run a single job ===
 run_job() {
   case "$1" in
@@ -66,36 +97,49 @@ run_job() {
 
     job3_bucket_test)
       BUCKET="bucket-test-$DAY-$RANDOM"
-      log_action "$TIMESTAMP" "bucket-create" "Creating bucket $BUCKET" "start"
-      EXP_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 5 + 3)) days")
-      sleep_random 1 60
-      oci os bucket create --name "$BUCKET" --compartment-id "$TENANCY_OCID" \
-        --defined-tags "{\"auto\":{\"auto-delete\":\"true\",\"auto-delete-date\":\"$EXP_DATE\"}}" \
-        && log_action "$TIMESTAMP" "bucket-create" "Created bucket with auto-delete" "success"
-
-      echo "hello world $(date)" > test.txt
-      sleep_random 1 30
-      oci os object put --bucket-name "$BUCKET" --file test.txt && log_action "$TIMESTAMP" "upload" "Uploaded test.txt" "success"
-      sleep_random 1 80
-      oci os object delete --bucket-name "$BUCKET" --name test.txt --force && log_action "$TIMESTAMP" "delete-object" "Deleted test.txt" "success"
-      sleep_random 1 90
-      oci os bucket delete --bucket-name "$BUCKET" --force && log_action "$TIMESTAMP" "bucket-delete" "Deleted bucket" "success"
+      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7 + 3)) days")
+      log_action "$TIMESTAMP" "bucket-create" "Creating bucket $BUCKET with auto-delete" "start"
+      oci os bucket create \
+        --name "$BUCKET" \
+        --compartment-id "$TENANCY_OCID" \
+        --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+        && log_action "$TIMESTAMP" "bucket-create" "Created $BUCKET with auto-delete-date=$DELETE_DATE" "success" \
+        || log_action "$TIMESTAMP" "bucket-create" "Failed to create $BUCKET" "fail"
+      echo "test $(date)" > test.txt
+      oci os object put --bucket-name "$BUCKET" --file test.txt \
+        && log_action "$TIMESTAMP" "upload" "Uploaded test.txt to $BUCKET" "success" \
+        || log_action "$TIMESTAMP" "upload" "Failed to upload to $BUCKET" "fail"
+      oci os object delete --bucket-name "$BUCKET" --name test.txt --force \
+        && log_action "$TIMESTAMP" "delete-object" "Deleted test.txt from $BUCKET" "success" \
+        || log_action "$TIMESTAMP" "delete-object" "Failed to delete test.txt from $BUCKET" "fail"
+      if oci os bucket get --bucket-name "$BUCKET" &>/dev/null; then
+        oci os bucket delete --bucket-name "$BUCKET" --force \
+          && log_action "$TIMESTAMP" "bucket-delete" "Deleted bucket $BUCKET" "success" \
+          || log_action "$TIMESTAMP" "bucket-delete" "Failed to delete bucket $BUCKET" "fail"
+      else
+        log_action "$TIMESTAMP" "bucket-delete" "Bucket $BUCKET does not exist" "fail"
+      fi
       rm -f test.txt
       ;;
 
     job4_cleanup_auto_delete)
-      log_action "$TIMESTAMP" "auto-clean" "Scanning buckets with auto-delete=true" "start"
-      NOW_DATE=$(date +%Y-%m-%d)
+      log_action "$TIMESTAMP" "auto-delete-scan" "Scanning for expired buckets with auto-delete=true" "start"
+      TODAY=$(date +%Y-%m-%d)
       BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
-        --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true']" --raw-output)
-
-      for BUCKET_JSON in $BUCKETS; do
-        NAME=$(echo "$BUCKET_JSON" | jq -r '.name')
-        DELETE_DATE=$(echo "$BUCKET_JSON" | jq -r '."defined-tags".auto."auto-delete-date"')
-        if [[ "$DELETE_DATE" < "$NOW_DATE" ]]; then
-          oci os bucket delete --bucket-name "$NAME" --force
-          log_action "$TIMESTAMP" "auto-delete" "Deleted bucket $NAME expired on $DELETE_DATE" "success"
-          sleep_random 1 30
+        --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].name" \
+        --raw-output)
+      for b in $BUCKETS; do
+        DELETE_DATE=$(oci os bucket get --bucket-name "$b" \
+          --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
+          --raw-output 2>/dev/null)
+        if [[ "$DELETE_DATE" < "$TODAY" ]]; then
+          if oci os bucket get --bucket-name "$b" &>/dev/null; then
+            oci os bucket delete --bucket-name "$b" --force \
+              && log_action "$TIMESTAMP" "auto-delete" "Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
+              || log_action "$TIMESTAMP" "auto-delete" "Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
+          else
+            log_action "$TIMESTAMP" "auto-delete" "Bucket $b not found for deletion" "fail"
+          fi
         fi
       done
       ;;
@@ -121,11 +165,8 @@ fi
 
 # === Randomly select number of jobs to run ===
 TOTAL_JOBS=5
-COUNT=$((RANDOM % 5 + 1))  # 1–5 jobs per day
-
+COUNT=$((RANDOM % TOTAL_JOBS + 1))
 ALL_JOBS=(job1_list_iam job2_check_quota job3_bucket_test job4_cleanup_auto_delete job5_list_resources)
-
-# Shuffle jobs
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
 for i in $(seq 1 $COUNT); do

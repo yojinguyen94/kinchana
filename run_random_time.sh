@@ -81,6 +81,7 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 ]]; then
     NOW_TS=$(date +%s)
     if (( NOW_TS - LAST_RUN_TS < 3600 )); then
       echo "$UTC_NOW [$ZONE - $HOUR] ⏭ Skipped (cooldown < 1h)" >> "$LOG"
+      echo "$LOG" | tail -n 1
       exit 0
     fi
   fi
@@ -110,4 +111,5 @@ $LOG_CONTENT
   echo "RUN_COUNT=$RUN_COUNT" >> "$STATE_FILE"
 else
   echo "$UTC_NOW [$ZONE - $HOUR] ⏭ Skipped (outside working hours or limit reached)" >> "$LOG"
+  echo "$LOG" | tail -n 1
 fi

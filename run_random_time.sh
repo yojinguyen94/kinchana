@@ -24,7 +24,7 @@ send_telegram() {
   curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
     -d chat_id="$CHAT_ID" \
     -d parse_mode="Markdown" \
-    -d text="$msg"
+    -d text="$msg" > /dev/null 2>&1
 }
 
 # Get local hour and date

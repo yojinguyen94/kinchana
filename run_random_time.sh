@@ -65,7 +65,7 @@ send_telegram() {
           rm -f /tmp/log_output.json
         else
           local text_send="$MSG
-📋 *Recent Log (last 5m):*
+📋 *Recent Log (last 30m):*
 \`\`\`json
 $logcontent
 \`\`\`

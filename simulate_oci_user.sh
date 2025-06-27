@@ -139,7 +139,7 @@ run_job() {
                 --raw-output)
       
       if [[ -z "$BUCKETS" || "$BUCKETS" =~ ^(\[\]|\s*)$ ]]; then
-        echo "❌ No bucket found with the tag auto-delete=true"
+        log_action "$TIMESTAMP" "auto-delete" "❌ No bucket found with the tag auto-delete=true" "success"
       else
         for b in $BUCKETS; do
           BUCKET_JSON=$(oci os bucket get --bucket-name "$b" 2>/dev/null)

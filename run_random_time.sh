@@ -73,7 +73,7 @@ send_telegram() {
     local MSG="🟢 *OCI Activity Simulation Triggered*
 ----------------------------
  *Zone:* $ZONE_ESC
- *Local Hour:* $HOUR
+ *Working Hours:* $HOUR
  *UTC:* $UTC_NOW
  *Run Count:* $RUN_COUNT
  *IP:* $PUBLIC_IP

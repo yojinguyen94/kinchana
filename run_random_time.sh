@@ -8,7 +8,7 @@ LOG="$LOG_DIR/run_random_time.log"
 JSON_LOG="$LOG_DIR/oci_activity_log.json"
 UTC_NOW=$(date -u '+%F %T')
 STATE_FILE="/tmp/oci_random_state_$ZONE"
-RANDOM_CHANCE=$(( RANDOM % 6 ))
+RANDOM_CHANCE=$(( RANDOM % 5 ))
 
 mkdir -p "$LOG_DIR"
 
@@ -140,8 +140,10 @@ if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" 
   if [ -f "$STATE_FILE" ]; then
     LAST_RUN_TS=$(stat -c %Y "$STATE_FILE")
     NOW_TS=$(date +%s)
-    if (( NOW_TS - LAST_RUN_TS < 3600 )); then
-      echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ⏭ Skipped (cooldown < 1h)" >> "$LOG"
+    COOLDOWN=$(( RANDOM % 3601 + 3600 ))
+    if (( NOW_TS - LAST_RUN_TS < COOLDOWN )); then
+      COOLDOWN_MIN=$(( COOLDOWN / 60 ))
+      echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ⏭ Skipped (cooldown < ${COOLDOWN_MIN} min)" >> "$LOG"
       echo "$LOG"
       exit 0
     fi

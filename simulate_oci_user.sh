@@ -151,11 +151,11 @@ run_job() {
       log_action "$TIMESTAMP" "auto-delete-scan" "Scanning for expired buckets with auto-delete=true" "start"
       TODAY=$(date +%Y-%m-%d)
       BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
-                --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].name" \
+                --query "data[].name" \
                 --raw-output)
       
       if [[ -z "$BUCKETS" || "$BUCKETS" == "[]" ]]; then
-        log_action "$TIMESTAMP" "auto-delete-bucket" "❌ No bucket found with the tag auto-delete=true" "404"
+        log_action "$TIMESTAMP" "auto-delete-bucket" "❌ No bucket found" "404"
       else
         for b in $(parse_json_array_string "$BUCKETS"); do
             DELETE_DATE=$(oci os bucket get --bucket-name "$b" \

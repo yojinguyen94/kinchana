@@ -79,6 +79,17 @@ parse_json_array_string() {
   echo "$json_array_string" | sed 's/^\[//;s/\]$//' | tr -d '"' | tr ',' '\n'
 }
 
+parse_json_array() {
+  local json_input="$1"
+  echo "$json_input" | tr -d '\n' | sed -E 's/^\[//; s/\]$//' | sed 's/},[[:space:]]*{/\}\n\{/g' | while IFS= read -r line || [[ -n "$line" ]]; do
+    ID=$(echo "$line" | grep -oP '"id"\s*:\s*"\K[^"]+')
+    NAME=$(echo "$line" | grep -oP '"name"\s*:\s*"\K[^"]+')
+    if [[ -n "$ID" && -n "$NAME" ]]; then
+      echo "$ID|$NAME"
+    fi
+  done
+}
+
 # === Run a single job ===
 run_job() {
   case "$1" in
@@ -286,10 +297,10 @@ run_job() {
       log_action "$TIMESTAMP" "auto-delete-vcn" "🔍 Scanning for expired VCNs" "start"
 
       VCNs=$(oci network vcn list --compartment-id "$TENANCY_OCID" \
-        --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].{name:name,id:id}" \
+        --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].{name:\"display-name\",id:id}" \
         --raw-output)
 
-      while read -r VCN_NAME VCN_ID; do
+      parse_json_array "$VCNs" | while IFS='|' read -r VCN_ID VCN_NAME; do
         DELETE_DATE=$(oci network vcn get --vcn-id "$VCN_ID" \
           --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           --raw-output 2>/dev/null)
@@ -328,7 +339,7 @@ run_job() {
             && log_action "$TIMESTAMP" "auto-delete-vcn" "Deleted VCN $VCN_NAME (expired: $DELETE_DATE)" "success" \
             || log_action "$TIMESTAMP" "auto-delete-vcn" "❌ Failed to delete VCN $VCN_NAME" "fail"
         fi
-      done <<< "$VCNs"
+      done
 
       sleep_random 2 10
       log_action "$TIMESTAMP" "auto-delete-volume" "🔍 Scanning for expired block volumes" "start"
@@ -337,7 +348,7 @@ run_job() {
         --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].{name:\"display-name\",id:id}" \
         --raw-output)
 
-      while read -r VOL_NAME VOL_ID; do
+      parse_json_array "$VOLUMES" | while IFS='|' read -r VOL_ID VOL_NAME; do
         DELETE_DATE=$(oci bv volume get --volume-id "$VOL_ID" \
           --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           --raw-output 2>/dev/null)
@@ -348,7 +359,7 @@ run_job() {
             && log_action "$TIMESTAMP" "auto-delete-volume" "Deleted volume $VOL_NAME (expired: $DELETE_DATE)" "success" \
             || log_action "$TIMESTAMP" "auto-delete-volume" "❌ Failed to delete volume $VOL_NAME" "fail"
         fi
-      done <<< "$VOLUMES"
+      done
       ;;
   esac
 }

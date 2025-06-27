@@ -28,6 +28,11 @@ while (( ip_attempt < max_ip_retries )); do
     sleep 2
 done
 
+ISP=$(echo "$response" | grep -oP '"isp":\s*"\K[^"]+')
+ORG=$(echo "$response" | grep -oP '"org":\s*"\K[^"]+')
+REGION=$(echo "$response" | grep -oP '"regionName":\s*"\K[^"]+')
+CITY=$(echo "$response" | grep -oP '"city":\s*"\K[^"]+')
+COUNTRY=$(echo "$response" | grep -oP '"country":\s*"\K[^"]+')
 PUBLIC_IP=$(echo "$response" | grep -oP '"query":\s*"\K[^"]+')
 
 get_hour_by_zone() {
@@ -72,6 +77,11 @@ send_telegram() {
  *UTC:* $UTC_NOW
  *Run Count:* $RUN_COUNT
  *IP:* $PUBLIC_IP
+ *ISP:* $ISP
+ *Org:* $ORG
+ *Region:* $REGION
+ *City:* $CITY
+ *Country:* $COUNTRY
 ----------------------------"
     while (( attempt <= max_retries )); do
         # If the log is too long, send it as a file

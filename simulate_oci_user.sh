@@ -135,23 +135,24 @@ run_job() {
       log_action "$TIMESTAMP" "auto-delete-scan" "Scanning for expired buckets with auto-delete=true" "start"
       TODAY=$(date +%Y-%m-%d)
       BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
-        --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].name" \
-        --raw-output)
-      for b in $BUCKETS; do
-        DELETE_DATE=$(oci os bucket get --bucket-name "$b" \
-          --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
-          --raw-output 2>/dev/null)
-        sleep_random 1 10
-        if [[ "$DELETE_DATE" < "$TODAY" ]]; then
-          if oci os bucket get --bucket-name "$b" &>/dev/null; then
+                --query "data[?contains(@.\"defined-tags\".auto.\"auto-delete\", 'true')].name" \
+                --raw-output)
+      
+      if [[ -z "$BUCKETS" || "$BUCKETS" =~ ^(\[\]|\s*)$ ]]; then
+        echo "❌ No bucket found with the tag auto-delete=true"
+      else
+        for b in $BUCKETS; do
+          BUCKET_JSON=$(oci os bucket get --bucket-name "$b" 2>/dev/null)
+          DELETE_DATE=$(echo "$BUCKET_JSON" | jq -r '.data."defined-tags".auto."auto-delete-date" // empty')
+          sleep_random 1 10
+      
+          if [[ -n "$DELETE_DATE" && "$DELETE_DATE" < "$TODAY" ]]; then
             oci os bucket delete --bucket-name "$b" --force \
               && log_action "$TIMESTAMP" "auto-delete" "Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
               || log_action "$TIMESTAMP" "auto-delete" "Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
-          else
-            log_action "$TIMESTAMP" "auto-delete" "Bucket $b not found for deletion" "fail"
           fi
-        fi
-      done
+        done
+      fi
       ;;
 
     job5_list_resources)

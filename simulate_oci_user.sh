@@ -14,6 +14,7 @@ mkdir -p "$LOG_DIR"
 TENANCY_NAME=$(oci iam tenancy get --tenancy-id "$TENANCY_OCID" --query "data.name" --raw-output 2>/dev/null)
 USER_ID=$(oci iam user list --query "data[0].id" --raw-output 2>/dev/null)
 USER_EMAIL=$(oci iam user get --user-id "$USER_ID" --query "data.email" --raw-output 2>/dev/null)
+REGION=$(awk -F'=' '/^region=/{print $2}' ~/.oci/config)
 
 # === Auto clean logs ===
 RETENTION_DAYS=30
@@ -32,8 +33,8 @@ log_action() {
   local action="$2"
   local description="$3"
   local status="$4"
-  echo "$timestamp,$TENANCY_NAME,$USER_EMAIL,$action,$description,$status" >> "$CSV_LOG"
-  echo "{\"timestamp\": \"$timestamp\", \"tenancy_name\": \"$TENANCY_NAME\", \"user_email\": \"$USER_EMAIL\", \"action\": \"$action\", \"description\": \"$description\", \"status\": \"$status\"}" >> "$JSON_LOG"
+  echo "$timestamp,$TENANCY_NAME,$USER_EMAIL,$REGION,$action,$description,$status" >> "$CSV_LOG"
+  echo "{\"timestamp\": \"$timestamp\", \"tenancy_name\": \"$TENANCY_NAME\", \"user_email\": \"$USER_EMAIL\", \"region\": \"$REGION\", \"action\": \"$action\", \"description\": \"$description\", \"status\": \"$status\"}" >> "$JSON_LOG"
 }
 
 # === Random sleep between 2 jobs or inside jobs ===

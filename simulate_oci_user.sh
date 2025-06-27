@@ -106,13 +106,13 @@ run_job() {
         --compartment-id "$TENANCY_OCID" \
         --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
         && log_action "$TIMESTAMP" "bucket-create" "Created $BUCKET with auto-delete-date=$DELETE_DATE" "success" \
-        || log_action "$TIMESTAMP" "bucket-create" "Failed to create $BUCKET" "fail"
+        || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create $BUCKET" "fail"
       filetest="test-$DAY-$RANDOM.txt"
       echo "test $(date)" > $filetest
       sleep_random 1 10
       oci os object put --bucket-name "$BUCKET" --file $filetest \
         && log_action "$TIMESTAMP" "upload" "Uploaded $filetest to $BUCKET" "success" \
-        || log_action "$TIMESTAMP" "upload" "Failed to upload to $BUCKET" "fail"
+        || log_action "$TIMESTAMP" "upload" "❌ Failed to upload to $BUCKET" "fail"
       sleep_random 1 10
       #oci os object delete --bucket-name "$BUCKET" --name $filetest --force \
       #  && log_action "$TIMESTAMP" "delete-object" "Deleted $filetest from $BUCKET" "success" \
@@ -153,13 +153,13 @@ run_job() {
             for obj in $OBJECTS; do
               oci os object delete --bucket-name "$b" --name "$obj" --force \
                 && log_action "$TIMESTAMP" "delete-object" "Deleted "$obj" from $b" "success" \
-                || log_action "$TIMESTAMP" "delete-object" "Failed to delete "$obj" from $b" "fail"
+                || log_action "$TIMESTAMP" "delete-object" "❌ Failed to delete "$obj" from $b" "fail"
               sleep_random 2 5
             done
             sleep_random 2 10
             oci os bucket delete --bucket-name "$b" --force \
               && log_action "$TIMESTAMP" "auto-delete" "Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
-              || log_action "$TIMESTAMP" "auto-delete" "Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
+              || log_action "$TIMESTAMP" "auto-delete" "❌ Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
           fi
         done
       fi
@@ -181,7 +181,7 @@ run_job() {
 if oci iam user get --user-id "$USER_ID" &> /dev/null; then
   log_action "$TIMESTAMP" "session" "Get user info" "success"
 else
-  log_action "$TIMESTAMP" "session" "Get user info" "fail"
+  log_action "$TIMESTAMP" "session" "❌ Get user info" "fail"
 fi
 
 # === Randomly select number of jobs to run ===

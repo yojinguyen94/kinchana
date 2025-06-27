@@ -113,18 +113,18 @@ run_job() {
       oci os object put --bucket-name "$BUCKET" --file $filetest \
         && log_action "$TIMESTAMP" "upload" "Uploaded $filetest to $BUCKET" "success" \
         || log_action "$TIMESTAMP" "upload" "Failed to upload to $BUCKET" "fail"
-      sleep_random 1 20
-      oci os object delete --bucket-name "$BUCKET" --name $filetest --force \
-        && log_action "$TIMESTAMP" "delete-object" "Deleted $filetest from $BUCKET" "success" \
-        || log_action "$TIMESTAMP" "delete-object" "Failed to delete $filetest from $BUCKET" "fail"
-      sleep_random 1 20
-      if oci os bucket get --bucket-name "$BUCKET" &>/dev/null; then
-        oci os bucket delete --bucket-name "$BUCKET" --force \
-          && log_action "$TIMESTAMP" "bucket-delete" "Deleted bucket $BUCKET" "success" \
-          || log_action "$TIMESTAMP" "bucket-delete" "Failed to delete bucket $BUCKET" "fail"
-      else
-        log_action "$TIMESTAMP" "bucket-delete" "Bucket $BUCKET does not exist" "fail"
-      fi
+      sleep_random 1 10
+      #oci os object delete --bucket-name "$BUCKET" --name $filetest --force \
+      #  && log_action "$TIMESTAMP" "delete-object" "Deleted $filetest from $BUCKET" "success" \
+      #  || log_action "$TIMESTAMP" "delete-object" "Failed to delete $filetest from $BUCKET" "fail"
+      #sleep_random 1 20
+      #if oci os bucket get --bucket-name "$BUCKET" &>/dev/null; then
+      #  oci os bucket delete --bucket-name "$BUCKET" --force \
+      #    && log_action "$TIMESTAMP" "bucket-delete" "Deleted bucket $BUCKET" "success" \
+      #    || log_action "$TIMESTAMP" "bucket-delete" "Failed to delete bucket $BUCKET" "fail"
+      #else
+      #  log_action "$TIMESTAMP" "bucket-delete" "Bucket $BUCKET does not exist" "fail"
+      #fi
       rm -f $filetest
       ;;
 
@@ -138,15 +138,25 @@ run_job() {
                 --query "data[?contains(@.\"defined-tags\".auto.\"auto-delete\", 'true')].name" \
                 --raw-output)
       
-      if [[ -z "$BUCKETS" || "$BUCKETS" =~ ^(\[\]|\s*)$ ]]; then
-        log_action "$TIMESTAMP" "auto-delete" "❌ No bucket found with the tag auto-delete=true" "success"
+      if [[ -z "$BUCKETS" || "$BUCKETS" == "[]" ]]; then
+        log_action "$TIMESTAMP" "auto-delete" "❌ No bucket found with the tag auto-delete=true" "404"
       else
         for b in $BUCKETS; do
-          BUCKET_JSON=$(oci os bucket get --bucket-name "$b" 2>/dev/null)
-          DELETE_DATE=$(echo "$BUCKET_JSON" | jq -r '.data."defined-tags".auto."auto-delete-date" // empty')
+          DELETE_DATE=$(oci os bucket get --bucket-name "$b" \
+                        --query 'data."defined-tags".auto."auto-delete-date"' \
+                        --raw-output 2>/dev/null)
           sleep_random 1 10
-      
           if [[ -n "$DELETE_DATE" && "$DELETE_DATE" < "$TODAY" ]]; then
+            log_action "$TIMESTAMP" "delete-object" "🗑️ Deleting all objects in $b..." "start"
+          
+            OBJECTS=$(oci os object list --bucket-name "$b" --query "data[].name" --raw-output)
+            for obj in $OBJECTS; do
+              oci os object delete --bucket-name "$b" --name "$obj" --force \
+                && log_action "$TIMESTAMP" "delete-object" "Deleted "$obj" from $b" "success" \
+                || log_action "$TIMESTAMP" "delete-object" "Failed to delete "$obj" from $b" "fail"
+              sleep_random 2 5
+            done
+            sleep_random 2 10
             oci os bucket delete --bucket-name "$b" --force \
               && log_action "$TIMESTAMP" "auto-delete" "Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
               || log_action "$TIMESTAMP" "auto-delete" "Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"

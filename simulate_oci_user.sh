@@ -13,7 +13,7 @@ mkdir -p "$LOG_DIR"
 # === Get info ===
 TENANCY_NAME=$(oci iam tenancy get --tenancy-id "$TENANCY_OCID" --query "data.name" --raw-output 2>/dev/null)
 USER_ID=$(oci iam user list --query "data[0].id" --raw-output 2>/dev/null)
-USER_EMAIL=$(oci iam user get --user-id "$USER_ID" --query "data.name" --raw-output 2>/dev/null)
+USERNAME=$(oci iam user get --user-id "$USER_ID" --query "data.name" --raw-output 2>/dev/null)
 REGION=$(awk -F'=' '/^region=/{print $2}' ~/.oci/config)
 HOME_REGION=$(oci iam region-subscription list \
   --tenancy-id "$TENANCY_OCID" \
@@ -28,7 +28,7 @@ fi
 RETENTION_DAYS=30
 if [ -f "$CSV_LOG" ] && [ $(find "$CSV_LOG" -mtime +$RETENTION_DAYS) ]; then
   rm -f "$CSV_LOG"
-  echo "timestamp,tenancy,user_email,action,description,status" > "$CSV_LOG"
+  echo "timestamp,tenancy,username,region,action,description,status" > "$CSV_LOG"
 fi
 if [ -f "$JSON_LOG" ] && [ $(find "$JSON_LOG" -mtime +$RETENTION_DAYS) ]; then
   rm -f "$JSON_LOG"
@@ -41,8 +41,8 @@ log_action() {
   local action="$2"
   local description="$3"
   local status="$4"
-  echo "$timestamp,$TENANCY_NAME,$USER_EMAIL,$REGION,$action,$description,$status" >> "$CSV_LOG"
-  echo "{\"timestamp\": \"$timestamp\", \"tenancy_name\": \"$TENANCY_NAME\", \"user_email\": \"$USER_EMAIL\", \"region\": \"$REGION\", \"action\": \"$action\", \"description\": \"$description\", \"status\": \"$status\"}" >> "$JSON_LOG"
+  echo "$timestamp,$TENANCY_NAME,$USERNAME,$REGION,$action,$description,$status" >> "$CSV_LOG"
+  echo "{\"timestamp\": \"$timestamp\", \"tenancy_name\": \"$TENANCY_NAME\", \"username\": \"$USERNAME\", \"region\": \"$REGION\", \"action\": \"$action\", \"description\": \"$description\", \"status\": \"$status\"}" >> "$JSON_LOG"
 }
 
 # === Random sleep between 2 jobs or inside jobs ===

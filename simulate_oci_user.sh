@@ -109,6 +109,38 @@ remove_note_from_freeform_tags() {
     sed -E 's/\{[[:space:]]*,/\{/g'   # Xoá dấu phẩy nếu "note" ở đầu
 }
 
+generate_fake_project_files() {
+  mkdir -p deploy_tmp
+  FILE_POOL=("main.py" "config.yaml" "requirements.txt" "Dockerfile" ".env.example" "README.md" ".gitignore" "deploy.sh")
+  CONTENT_POOL=(
+    'def handler(event, context):\n  return f"Hello, {event.get(\"user\", \"guest\")}"'
+    'app:\n  name: user-service\n  version: 1.0.0\n  debug: false'
+    'requests\nflask\npydantic'
+    'FROM python:3.9\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nCMD ["python", "main.py"]'
+    'APP_ENV=production\nDB_URI=sqlite:///tmp.db\nSECRET_KEY=demo123'
+    '# Project Title\nThis is a demo deployment package for OCI simulation.'
+    '.env\n__pycache__/\n*.tar.gz\ndeploy_tmp/'
+    '#!/bin/bash\necho "Deploying..."\ntar -czf build.tar.gz .\noci os object put --bucket-name "$DEPLOY_BUCKET" --name "$FOLDER/build.tar.gz" --file build.tar.gz'
+  )
+
+  COUNT=$((RANDOM % 5 + 3))  # Random 3–7 files
+  USED_INDEXES=()
+
+  for ((i = 0; i < COUNT; i++)); do
+    while :; do
+      IDX=$((RANDOM % ${#FILE_POOL[@]}))
+      if [[ ! " ${USED_INDEXES[@]} " =~ " ${IDX} " ]]; then
+        USED_INDEXES+=("$IDX")
+        FILENAME=${FILE_POOL[$IDX]}
+        CONTENT=${CONTENT_POOL[$IDX]}
+        echo -e "$CONTENT" > "deploy_tmp/$FILENAME"
+        echo "📝 Created $FILENAME"
+        break
+      fi
+    done
+  done
+}
+
 # === Run a single job ===
 run_job() {
   case "$1" in
@@ -129,38 +161,99 @@ run_job() {
         --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "quota" "✅ Get compute quota" "success"
       ;;
 
-    job3_bucket_test)
-      ensure_namespace_auto
-      ensure_tag "auto-delete" "Mark for auto deletion"
-      ensure_tag "auto-delete-date" "Scheduled auto delete date"
-      BUCKET="bucket-test-$DAY-$RANDOM"
-      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 5)) days")
-      log_action "$TIMESTAMP" "bucket-create" "Creating bucket $BUCKET with auto-delete" "start"
-      oci os bucket create \
-        --name "$BUCKET" \
-        --compartment-id "$TENANCY_OCID" \
-        --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-        && log_action "$TIMESTAMP" "bucket-create" "✅ Created $BUCKET with auto-delete-date=$DELETE_DATE" "success" \
-        || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create $BUCKET" "fail"
-      filetest="test-$DAY-$RANDOM.txt"
-      echo "test $(date)" > $filetest
-      sleep_random 1 10
-      oci os object put --bucket-name "$BUCKET" --file $filetest \
-        && log_action "$TIMESTAMP" "upload" "✅ Uploaded $filetest to $BUCKET" "success" \
-        || log_action "$TIMESTAMP" "upload" "❌ Failed to upload to $BUCKET" "fail"
-      sleep_random 1 10
-      #oci os object delete --bucket-name "$BUCKET" --name $filetest --force \
-      #  && log_action "$TIMESTAMP" "delete-object" "Deleted $filetest from $BUCKET" "success" \
-      #  || log_action "$TIMESTAMP" "delete-object" "Failed to delete $filetest from $BUCKET" "fail"
-      #sleep_random 1 20
-      #if oci os bucket get --bucket-name "$BUCKET" &>/dev/null; then
-      #  oci os bucket delete --bucket-name "$BUCKET" --force \
-      #    && log_action "$TIMESTAMP" "bucket-delete" "Deleted bucket $BUCKET" "success" \
-      #    || log_action "$TIMESTAMP" "bucket-delete" "Failed to delete bucket $BUCKET" "fail"
-      #else
-      #  log_action "$TIMESTAMP" "bucket-delete" "Bucket $BUCKET does not exist" "fail"
-      #fi
-      rm -f $filetest
+    job3_upload_random_files_to_bucket)
+      BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
+	    --query "data[].name" --raw-output)
+
+      local ACTION=$((RANDOM % 2))
+      BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
+      
+      if [[ "$ACTION" -eq 0 && -n "$BUCKETS" && "$BUCKET_COUNT" -gt 0 ]]; then
+	ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
+	readarray -t BUCKET_ARRAY <<< "$ITEMS"
+	RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
+	BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
+        log_action "$TIMESTAMP" "select-bucket" "🎯 Selected 1 random bucket out of $BUCKET_COUNT: $BUCKET_NAME" "info"
+      else
+	ensure_namespace_auto
+	ensure_tag "auto-delete" "Mark for auto deletion"
+	ensure_tag "auto-delete-date" "Scheduled auto delete date"
+	BUCKET_NAME="$(shuf -n 1 -e app-logs media-assets db-backup invoice-data user-files)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+	DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 5)) days")
+	log_action "$TIMESTAMP" "bucket-create" "🎯 Creating bucket $BUCKET_NAME with auto-delete" "start"
+	oci os bucket create \
+	        --name "$BUCKET_NAME" \
+	        --compartment-id "$TENANCY_OCID" \
+	        --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+	        && log_action "$TIMESTAMP" "bucket-create" "✅ Created $BUCKET_NAME with auto-delete-date=$DELETE_DATE" "success" \
+	        || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create $BUCKET_NAME" "fail"
+      fi
+      
+      local FILENAME_PATTERNS=(
+	"system_log_%Y%m%d_%H%M%S_$RANDOM.log"
+	"user_activity_%Y-%m-%d_$RANDOM.txt"
+	"data_export_%Y%m%d_$RANDOM.csv"
+	"backup_snapshot_%Y%m%d.tar.gz"
+	"report_summary_%Y%m%d.doc"
+	"volume_info_%Y%m%d_$RANDOM.json"
+	"task_notes_%Y%m%d.txt"
+	"daily_run_%Y%m%d_%H%M.txt"
+	"upload_test_$RANDOM.txt"
+      )
+	
+      local CONTENTS=(
+	"### System Log Start ###
+	$(date) - Service initialized
+	$(date) - User session started
+	$(date) - No errors reported
+	### End of Log ###"
+	
+	"User Activity Summary - $(date '+%Y-%m-%d')
+	Total logins: $((RANDOM % 50))
+	Failed logins: $((RANDOM % 5))
+	Active sessions: $((RANDOM % 20))
+	System health: OK"
+	
+	"Report generated by automated task runner.
+	This report includes summary of operations:
+	- Created 2 buckets
+	- Deleted 1 VCN
+	- Uploaded backup file
+	
+	Timestamp: $(date)
+	Session ID: $RANDOM"
+	
+	"Temporary testing file.
+	Region: $REGION
+	Generated at: $(date)
+	Notes: For simulation only."
+	
+	"{
+	\"event\": \"volume-check\",
+	\"timestamp\": \"$(date -u +%FT%TZ)\",
+	\"status\": \"healthy\",
+	\"note\": \"automated scan\"
+	}"
+      )
+	
+      local NUM_UPLOADS=$((RANDOM % 3 + 1)) # 1–3 files
+	
+      for ((i = 1; i <= NUM_UPLOADS; i++)); do
+	local FILE_TEMPLATE=${FILENAME_PATTERNS[$((RANDOM % ${#FILENAME_PATTERNS[@]}))]}
+	local FILE_NAME=$(date +"$FILE_TEMPLATE")
+	local FILE_CONTENT="${CONTENTS[$((RANDOM % ${#CONTENTS[@]}))]}"
+	
+	echo "$FILE_CONTENT" > "$FILE_NAME"
+	
+	if oci os object put --bucket-name "$BUCKET_NAME" --file "$FILE_NAME" --force; then
+	   log_action "$TIMESTAMP" "bucket_upload" "✅ Uploaded $FILE_NAME to $BUCKET_NAME" "success"
+	else
+	   log_action "$TIMESTAMP" "bucket_upload" "❌ Failed to upload $FILE_NAME to $BUCKET_NAME" "fail"
+	fi
+	
+	rm -f "$FILE_NAME"
+	sleep_random 2 8
+      done
       ;;
 
     job4_cleanup_auto_delete)
@@ -212,8 +305,8 @@ run_job() {
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
 
-      VCN_NAME="vcn-test-$DAY-$RANDOM"
-      SUBNET_NAME="subnet-test-$DAY-$RANDOM"
+      VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
 
       log_action "$TIMESTAMP" "vcn-create" "🎯 Creating VCN $VCN_NAME with auto-delete" "start"
@@ -251,7 +344,7 @@ run_job() {
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
-      VOL_NAME="volume-test-$DAY-$RANDOM"
+      VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
 
       log_action "$TIMESTAMP" "volume-create" "🎯 Creating volume $VOL_NAME with auto-delete" "start"
@@ -381,7 +474,7 @@ run_job() {
       	ensure_namespace_auto
         ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
- 	DEPLOY_BUCKET="deploy-bucket-$DAY"
+ 	DEPLOY_BUCKET="$(shuf -n 1 -e deploy-artifacts deployment-store deploy-backup pipeline-output release-bucket)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       	BUCKET_EXISTS=$(oci os bucket get --bucket-name "$DEPLOY_BUCKET" --query 'data.name' --raw-output 2>/dev/null)
 
 	if [ -z "$BUCKET_EXISTS" ]; then
@@ -390,23 +483,20 @@ run_job() {
 	    --name "$DEPLOY_BUCKET" \
 	    --compartment-id "$TENANCY_OCID" \
 	    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-	    && log_action "$TIMESTAMP" "bucket-create" "✅ Created bucket $DEPLOY_BUCKET - DELETE_DATE: $DELETE_DATE  for deployment" "success" \
+	    && log_action "$TIMESTAMP" "bucket-create" "✅ Created bucket $DEPLOY_BUCKET - DELETE_DATE: $DELETE_DATE for deployment" "success" \
 	    || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create deployment bucket $DEPLOY_BUCKET" "fail"
 	fi
- 
-	FOLDER="deploy/$(date +%Y-%m-%d)"
-	mkdir -p deploy_tmp
-	echo 'print("Hello World")' > deploy_tmp/main.py
-	echo 'version: 1.0' > deploy_tmp/config.yaml
+ 	# Create simulated project files
+ 	generate_fake_project_files
+ 	# Archive it
+ 	DEPLOY_FILE="code-$(date +%Y%m%d%H%M)-$RANDOM.tar.gz"
+ 	tar -czf "$DEPLOY_FILE" -C deploy_tmp .
+  	# Upload to selected bucket
+  	FOLDER="deploy/$(date +%Y-%m-%d)"
 	
-	DEPLOY_FILE="code-$(date +%Y%m%d%H%M)-$RANDOM.tar.gz"
-	tar -czf "$DEPLOY_FILE" -C deploy_tmp .
-	
-	oci os object put --bucket-name "$DEPLOY_BUCKET" \
-	  --file "$DEPLOY_FILE" \
-	  --name "$FOLDER/$DEPLOY_FILE" \
-	  && log_action "$TIMESTAMP" "deploy" "✅ Deployed $DEPLOY_FILE to $DEPLOY_BUCKET" "success" \
-	  || log_action "$TIMESTAMP" "deploy" "❌ Failed to deploy $DEPLOY_FILE" "fail"
+  	oci os object put --bucket-name "$DEPLOY_BUCKET" --name "$FOLDER/$DEPLOY_FILE" --file "$DEPLOY_FILE" --force && \
+    		log_action "$TIMESTAMP" "deploy" "✅ Uploaded $DEPLOY_FILE to $DEPLOY_BUCKET/$FOLDER" "success" || \
+    		log_action "$TIMESTAMP" "deploy" "❌ Failed to upload $DEPLOY_FILE to $DEPLOY_BUCKET" "fail"
 	
 	rm -rf deploy_tmp "$DEPLOY_FILE"
       ;;
@@ -550,7 +640,7 @@ fi
 # === Randomly select number of jobs to run ===
 TOTAL_JOBS=13
 COUNT=$((RANDOM % TOTAL_JOBS + 1))
-ALL_JOBS=(job1_list_iam job2_check_quota job3_bucket_test job4_cleanup_auto_delete job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_simulation job12_update_volume_resource_tag job13_update_bucket_resource_tag)
+ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_auto_delete job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_simulation job12_update_volume_resource_tag job13_update_bucket_resource_tag)
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
 for i in $(seq 1 $COUNT); do

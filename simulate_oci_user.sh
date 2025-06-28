@@ -252,7 +252,7 @@ run_job() {
       DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
 
       log_action "$TIMESTAMP" "volume-create" "Creating volume $VOL_NAME with auto-delete" "start"
-      VCN_ID=$(oci bv volume create \
+      VOL_ID=$(oci bv volume create \
         --compartment-id "$TENANCY_OCID" \
         --display-name "$VOL_NAME" \
         --size-in-gbs 50 \

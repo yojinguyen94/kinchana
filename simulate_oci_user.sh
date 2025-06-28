@@ -198,7 +198,7 @@ run_job() {
       ;;
 
     job5_list_resources)
-      log_action "$TIMESTAMP" "resource-view" "List common resources" "start"
+      log_action "$TIMESTAMP" "resource-view" "🔍 List common resources" "start"
       sleep_random 1 30
       oci network vcn list --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "vcn-list" "✅ List VCNs" "success"
       sleep_random 1 90

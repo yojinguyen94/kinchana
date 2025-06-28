@@ -105,8 +105,8 @@ parse_json_array() {
 remove_note_from_freeform_tags() {
   echo "$1" | tr -d '\n' |
     sed -E 's/"note"[[:space:]]*:[[:space:]]*"[^"]*"[[:space:]]*,?[[:space:]]*//g' |
-    sed -E 's/,[[:space:]]*}/}/g' |   # Xoá dấu phẩy nếu "note" ở cuối
-    sed -E 's/\{[[:space:]]*,/\{/g'   # Xoá dấu phẩy nếu "note" ở đầu
+    sed -E 's/,[[:space:]]*}/}/g' |
+    sed -E 's/\{[[:space:]]*,/\{/g'
 }
 
 generate_fake_project_files() {

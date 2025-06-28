@@ -575,59 +575,58 @@ run_job() {
 	
 	BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
 	if [[ -z "$BUCKETS" || "$BUCKET_COUNT" -eq 0 ]]; then
-	    log_action "$TIMESTAMP" "update-tag" "❌ No buckets found to tag" "skip"
-	    break
-	fi
-	
-	ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
-	readarray -t BUCKET_ARRAY <<< "$ITEMS"
-	RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
-	BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
-	
-	# Random note value
-	NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-bucket" \
-	       "temp-data" "attached-to-db" "daily-check" "bucket-active" "test-note")
-	
-	CURRENT_TAGS=$(oci os bucket get --bucket-name "$BUCKET_NAME" \
-	    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)
- 	
- 	OLD_NOTE=$(echo "$CURRENT_TAGS" | grep -o '"note"[[:space:]]*:[[:space:]]*"[^"]*"' | \
-	            sed -E 's/.*"note"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
-	
-	RANDOM_NOTE=""
-	attempts=0
-	while [[ -z "$RANDOM_NOTE" || "$RANDOM_NOTE" == "$OLD_NOTE" ]]; do
-	  RANDOM_NOTE=${NOTES[$((RANDOM % ${#NOTES[@]}))]}
-	  ((attempts++))
+	   log_action "$TIMESTAMP" "update-tag" "❌ No buckets found to tag" "skip"
+     	else
+      	   ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
+           readarray -t BUCKET_ARRAY <<< "$ITEMS"
+           RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
+           BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
+		
+           # Random note value
+           NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-bucket" \
+		       "temp-data" "attached-to-db" "daily-check" "bucket-active" "test-note")
+		
+           CURRENT_TAGS=$(oci os bucket get --bucket-name "$BUCKET_NAME" \
+		    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)
+	 	
+           OLD_NOTE=$(echo "$CURRENT_TAGS" | grep -o '"note"[[:space:]]*:[[:space:]]*"[^"]*"' | \
+		            sed -E 's/.*"note"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+		
+           RANDOM_NOTE=""
+           attempts=0
+           while [[ -z "$RANDOM_NOTE" || "$RANDOM_NOTE" == "$OLD_NOTE" ]]; do
+	       RANDOM_NOTE=${NOTES[$((RANDOM % ${#NOTES[@]}))]}
+	       ((attempts++))
+		 
+	       if [[ $attempts -ge 20 ]]; then
+		    break
+	       fi
+           done
 	 
-	  if [[ $attempts -ge 20 ]]; then
-	    break
-	  fi
-	done
- 
- 	if [[ "$RANDOM_NOTE" == "$OLD_NOTE" ]]; then
-	  RANDOM_NOTE="test-note-$(date +%s)-$RANDOM"
+           if [[ "$RANDOM_NOTE" == "$OLD_NOTE" ]]; then
+	       RANDOM_NOTE="test-note-$(date +%s)-$RANDOM"
+           fi
+		
+		
+           if [[ -z "$CURRENT_TAGS" || "$CURRENT_TAGS" == "null" ]]; then
+	       FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+           else
+	       CLEANED=$(remove_note_from_freeform_tags "$CURRENT_TAGS")
+	       if [[ "$CLEANED" =~ ^\{[[:space:]]*\}$ ]]; then
+		    FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+	       else
+		    FINAL_TAGS=$(echo "$CLEANED" | sed -E "s/}[[:space:]]*\$/,\"note\":\"$RANDOM_NOTE\"}/")
+	       fi
+           fi
+		
+           log_action "$TIMESTAMP" "update-tag" "🎯 Updating bucket $BUCKET_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
+		
+           oci os bucket update \
+	  	    --bucket-name "$BUCKET_NAME" \
+		    --freeform-tags "$FINAL_TAGS" \
+		    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $BUCKET_NAME with note=$RANDOM_NOTE" "success" \
+		    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $BUCKET_NAME" "fail"
 	fi
-	
-	
-	if [[ -z "$CURRENT_TAGS" || "$CURRENT_TAGS" == "null" ]]; then
-	  FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
-	else
-	  CLEANED=$(remove_note_from_freeform_tags "$CURRENT_TAGS")
-	  if [[ "$CLEANED" =~ ^\{[[:space:]]*\}$ ]]; then
-	    FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
-	  else
-	    FINAL_TAGS=$(echo "$CLEANED" | sed -E "s/}[[:space:]]*\$/,\"note\":\"$RANDOM_NOTE\"}/")
-	  fi
-	fi
-	
-	log_action "$TIMESTAMP" "update-tag" "🎯 Updating bucket $BUCKET_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
-	
-	oci os bucket update \
-  	    --bucket-name "$BUCKET_NAME" \
-	    --freeform-tags "$FINAL_TAGS" \
-	    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $BUCKET_NAME with note=$RANDOM_NOTE" "success" \
-	    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $BUCKET_NAME" "fail"
       ;;
   esac
 }

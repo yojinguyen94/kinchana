@@ -15,6 +15,14 @@ TENANCY_NAME=$(oci iam tenancy get --tenancy-id "$TENANCY_OCID" --query "data.na
 USER_ID=$(oci iam user list --query "data[0].id" --raw-output 2>/dev/null)
 USER_EMAIL=$(oci iam user get --user-id "$USER_ID" --query "data.email" --raw-output 2>/dev/null)
 REGION=$(awk -F'=' '/^region=/{print $2}' ~/.oci/config)
+HOME_REGION=$(oci iam region-subscription list \
+  --tenancy-id "$TENANCY_OCID" \
+  --query 'data[?"is-home-region"==`true`]."region-name" | [0]' \
+  --raw-output 2>/dev/null)
+
+if [[ -z "$HOME_REGION" ]]; then
+  HOME_REGION="$REGION"
+fi
 
 # === Auto clean logs ===
 RETENTION_DAYS=30
@@ -46,8 +54,8 @@ sleep_random() {
 }
 
 ensure_namespace_auto() {
-  # Tạo namespace auto nếu chưa có
   TAG_NAMESPACE_ID=$(oci iam tag-namespace list --compartment-id "$TENANCY_OCID" \
+	--region "$HOME_REGION" \
     --query "data[?name=='auto'].id | [0]" --raw-output)
   
   if [ -z "$TAG_NAMESPACE_ID" ]; then
@@ -55,6 +63,7 @@ ensure_namespace_auto() {
       --compartment-id "$TENANCY_OCID" \
       --name "auto" \
       --description "Auto delete simulation" \
+      --region "$HOME_REGION" \
       --query "data.id" --raw-output)
     log_action "$TIMESTAMP" "tag-namespace" "Created tag namespace auto" "success"
   fi
@@ -64,12 +73,14 @@ ensure_tag() {
   local TAG_NAME="$1"
   local DESC="$2"
   EXISTS=$(oci iam tag list --tag-namespace-id "$TAG_NAMESPACE_ID" \
+	--region "$HOME_REGION" \
     --query "data[?name=='$TAG_NAME'].id | [0]" --raw-output)
   if [ -z "$EXISTS" ]; then
     oci iam tag create \
       --tag-namespace-id "$TAG_NAMESPACE_ID" \
       --name "$TAG_NAME" \
       --description "$DESC" \
+      --region "$HOME_REGION" \
       --is-cost-tracking false > /dev/null
     log_action "$TIMESTAMP" "tag" "Created tag $TAG_NAME" "success"
   fi

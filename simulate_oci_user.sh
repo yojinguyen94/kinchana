@@ -62,7 +62,7 @@ ensure_namespace_auto() {
     TAG_NAMESPACE_ID=$(oci iam tag-namespace create \
       --compartment-id "$TENANCY_OCID" \
       --name "auto" \
-      --description "Auto delete simulation" \
+      --description "Auto delete tag" \
       --region "$HOME_REGION" \
       --query "data.id" --raw-output)
     log_action "$TIMESTAMP" "tag-namespace" "Created tag namespace auto" "success"
@@ -100,6 +100,13 @@ parse_json_array() {
       echo "$ID|$NAME"
     fi
   done
+}
+
+remove_note_from_freeform_tags() {
+  echo "$1" | tr -d '\n' |
+    sed -E 's/"note"[[:space:]]*:[[:space:]]*"[^"]*"[[:space:]]*,?[[:space:]]*//g' |
+    sed -E 's/,[[:space:]]*}/}/g' |   # Xoá dấu phẩy nếu "note" ở cuối
+    sed -E 's/\{[[:space:]]*,/\{/g'   # Xoá dấu phẩy nếu "note" ở đầu
 }
 
 # === Run a single job ===
@@ -369,6 +376,167 @@ run_job() {
         fi
       done
       ;;
+      
+      job11_deploy_simulation)
+      	ensure_namespace_auto
+        ensure_tag "auto-delete" "Mark for auto deletion"
+	ensure_tag "auto-delete-date" "Scheduled auto delete date"
+ 	DEPLOY_BUCKET="deploy-bucket-$DAY"
+      	BUCKET_EXISTS=$(oci os bucket get --bucket-name "$DEPLOY_BUCKET" --query 'data.name' --raw-output 2>/dev/null)
+
+	if [ -z "$BUCKET_EXISTS" ]; then
+	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
+	  oci os bucket create \
+	    --name "$DEPLOY_BUCKET" \
+	    --compartment-id "$TENANCY_OCID" \
+	    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+	    && log_action "$TIMESTAMP" "bucket-create" "Created bucket $DEPLOY_BUCKET - DELETE_DATE: $DELETE_DATE  for deployment" "success" \
+	    || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create deployment bucket $DEPLOY_BUCKET" "fail"
+	fi
+ 
+	FOLDER="deploy/$(date +%Y-%m-%d)"
+	mkdir -p deploy_tmp
+	echo 'print("Hello World")' > deploy_tmp/main.py
+	echo 'version: 1.0' > deploy_tmp/config.yaml
+	
+	DEPLOY_FILE="code-$(date +%Y%m%d%H%M)-$RANDOM.tar.gz"
+	tar -czf "$DEPLOY_FILE" -C deploy_tmp .
+	
+	oci os object put --bucket-name "$DEPLOY_BUCKET" \
+	  --file "$DEPLOY_FILE" \
+	  --name "$FOLDER/$DEPLOY_FILE" \
+	  && log_action "$TIMESTAMP" "deploy" "Deployed $DEPLOY_FILE to $DEPLOY_BUCKET" "success" \
+	  || log_action "$TIMESTAMP" "deploy" "❌ Failed to deploy $DEPLOY_FILE" "fail"
+	
+	rm -rf deploy_tmp "$DEPLOY_FILE"
+      ;;
+
+      job12_update_volume_resource_tag)
+	log_action "$TIMESTAMP" "update-tag" "🔍 Scanning volumes for tagging..." "start"
+
+	VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" \
+	    --query "data[].{id:id, name:\"display-name\"}" --raw-output)
+	
+	VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
+	if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
+	    log_action "$TIMESTAMP" "update-tag" "❌ No volumes found to tag" "skip"
+	    break
+	fi
+	
+	SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
+	SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
+	VOL_ID="${SELECTED%%|*}"
+	VOL_NAME="${SELECTED##*|}"
+	
+	# Random note value
+	NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-volume" \
+	       "temp-data" "attached-to-db" "daily-check" "volume-active" "test-note")
+	
+	CURRENT_TAGS=$(oci bv volume get --volume-id "$VOL_ID" \
+	    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)
+ 
+ 	OLD_NOTE=$(echo "$CURRENT_TAGS" | grep -o '"note"[[:space:]]*:[[:space:]]*"[^"]*"' | \
+	            sed -E 's/.*"note"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+	
+	RANDOM_NOTE=""
+	attempts=0
+	while [[ -z "$RANDOM_NOTE" || "$RANDOM_NOTE" == "$OLD_NOTE" ]]; do
+	  RANDOM_NOTE=${NOTES[$((RANDOM % ${#NOTES[@]}))]}
+	  ((attempts++))
+	 
+	  if [[ $attempts -ge 20 ]]; then
+	    break
+	  fi
+	done
+ 
+ 	if [[ "$RANDOM_NOTE" == "$OLD_NOTE" ]]; then
+	  RANDOM_NOTE="test-note-$(date +%s)-$RANDOM"
+	fi
+	
+	
+	if [[ -z "$CURRENT_TAGS" || "$CURRENT_TAGS" == "null" ]]; then
+	  FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+	else
+	  CLEANED=$(remove_note_from_freeform_tags "$CURRENT_TAGS")
+	  if [[ "$CLEANED" =~ ^\{[[:space:]]*\}$ ]]; then
+	    FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+	  else
+	    FINAL_TAGS=$(echo "$CLEANED" | sed -E "s/}[[:space:]]*\$/,\"note\":\"$RANDOM_NOTE\"}/")
+	  fi
+	fi
+	
+	log_action "$TIMESTAMP" "update-tag" "🎯 Updating volume $VOL_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
+	
+	oci bv volume update \
+	    --volume-id "$VOL_ID" \
+	    --freeform-tags "$FINAL_TAGS" \
+	    --force \
+	    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $VOL_NAME with note=$RANDOM_NOTE" "success" \
+	    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $VOL_NAME" "fail"
+      ;;
+
+      job13_update_bucket_resource_tag)
+	log_action "$TIMESTAMP" "update-tag" "🔍 Scanning bucket for tagging..." "start"
+
+	BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
+	    --query "data[].name" --raw-output)
+	
+	BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
+	if [[ -z "$BUCKETS" || "$BUCKET_COUNT" -eq 0 ]]; then
+	    log_action "$TIMESTAMP" "update-tag" "❌ No buckets found to tag" "skip"
+	    break
+	fi
+	
+	ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
+	readarray -t BUCKET_ARRAY <<< "$ITEMS"
+	RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
+	BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
+	
+	# Random note value
+	NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-bucket" \
+	       "temp-data" "attached-to-db" "daily-check" "bucket-active" "test-note")
+	
+	CURRENT_TAGS=$(oci os bucket get --bucket-name "$BUCKET_NAME" \
+	    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)
+ 	
+ 	OLD_NOTE=$(echo "$CURRENT_TAGS" | grep -o '"note"[[:space:]]*:[[:space:]]*"[^"]*"' | \
+	            sed -E 's/.*"note"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+	
+	RANDOM_NOTE=""
+	attempts=0
+	while [[ -z "$RANDOM_NOTE" || "$RANDOM_NOTE" == "$OLD_NOTE" ]]; do
+	  RANDOM_NOTE=${NOTES[$((RANDOM % ${#NOTES[@]}))]}
+	  ((attempts++))
+	 
+	  if [[ $attempts -ge 20 ]]; then
+	    break
+	  fi
+	done
+ 
+ 	if [[ "$RANDOM_NOTE" == "$OLD_NOTE" ]]; then
+	  RANDOM_NOTE="test-note-$(date +%s)-$RANDOM"
+	fi
+	
+	
+	if [[ -z "$CURRENT_TAGS" || "$CURRENT_TAGS" == "null" ]]; then
+	  FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+	else
+	  CLEANED=$(remove_note_from_freeform_tags "$CURRENT_TAGS")
+	  if [[ "$CLEANED" =~ ^\{[[:space:]]*\}$ ]]; then
+	    FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+	  else
+	    FINAL_TAGS=$(echo "$CLEANED" | sed -E "s/}[[:space:]]*\$/,\"note\":\"$RANDOM_NOTE\"}/")
+	  fi
+	fi
+	
+	log_action "$TIMESTAMP" "update-tag" "🎯 Updating bucket $BUCKET_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
+	
+	oci os bucket update \
+  	    --bucket-name "$BUCKET_NAME" \
+	    --freeform-tags "$FINAL_TAGS" \
+	    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $BUCKET_NAME with note=$RANDOM_NOTE" "success" \
+	    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $BUCKET_NAME" "fail"
+      ;;
   esac
 }
 
@@ -380,9 +548,9 @@ else
 fi
 
 # === Randomly select number of jobs to run ===
-TOTAL_JOBS=10
+TOTAL_JOBS=13
 COUNT=$((RANDOM % TOTAL_JOBS + 1))
-ALL_JOBS=(job1_list_iam job2_check_quota job3_bucket_test job4_cleanup_auto_delete job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes)
+ALL_JOBS=(job1_list_iam job2_check_quota job3_bucket_test job4_cleanup_auto_delete job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_simulation job12_update_volume_resource_tag job13_update_bucket_resource_tag)
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
 for i in $(seq 1 $COUNT); do

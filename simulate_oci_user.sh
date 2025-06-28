@@ -13,7 +13,7 @@ mkdir -p "$LOG_DIR"
 # === Get info ===
 TENANCY_NAME=$(oci iam tenancy get --tenancy-id "$TENANCY_OCID" --query "data.name" --raw-output 2>/dev/null)
 USER_ID=$(oci iam user list --query "data[0].id" --raw-output 2>/dev/null)
-USER_EMAIL=$(oci iam user get --user-id "$USER_ID" --query "data.email" --raw-output 2>/dev/null)
+USER_EMAIL=$(oci iam user get --user-id "$USER_ID" --query "data.name" --raw-output 2>/dev/null)
 REGION=$(awk -F'=' '/^region=/{print $2}' ~/.oci/config)
 HOME_REGION=$(oci iam region-subscription list \
   --tenancy-id "$TENANCY_OCID" \

@@ -512,59 +512,58 @@ run_job() {
 	VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
 	if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
 	    log_action "$TIMESTAMP" "update-tag" "❌ No volumes found to tag" "skip"
-	    break
-	fi
-	
-	SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
-	SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
-	VOL_ID="${SELECTED%%|*}"
-	VOL_NAME="${SELECTED##*|}"
-	
-	# Random note value
-	NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-volume" \
-	       "temp-data" "attached-to-db" "daily-check" "volume-active" "test-note")
-	
-	CURRENT_TAGS=$(oci bv volume get --volume-id "$VOL_ID" \
-	    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)
- 
- 	OLD_NOTE=$(echo "$CURRENT_TAGS" | grep -o '"note"[[:space:]]*:[[:space:]]*"[^"]*"' | \
-	            sed -E 's/.*"note"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
-	
-	RANDOM_NOTE=""
-	attempts=0
-	while [[ -z "$RANDOM_NOTE" || "$RANDOM_NOTE" == "$OLD_NOTE" ]]; do
-	  RANDOM_NOTE=${NOTES[$((RANDOM % ${#NOTES[@]}))]}
-	  ((attempts++))
+     	else
+	    SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
+	    SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
+	    VOL_ID="${SELECTED%%|*}"
+	    VOL_NAME="${SELECTED##*|}"
+		
+		# Random note value
+	    NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-volume" \
+		       "temp-data" "attached-to-db" "daily-check" "volume-active" "test-note")
+		
+	    CURRENT_TAGS=$(oci bv volume get --volume-id "$VOL_ID" \
+		    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)
 	 
-	  if [[ $attempts -ge 20 ]]; then
-	    break
-	  fi
-	done
- 
- 	if [[ "$RANDOM_NOTE" == "$OLD_NOTE" ]]; then
-	  RANDOM_NOTE="test-note-$(date +%s)-$RANDOM"
+	    OLD_NOTE=$(echo "$CURRENT_TAGS" | grep -o '"note"[[:space:]]*:[[:space:]]*"[^"]*"' | \
+		            sed -E 's/.*"note"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+		
+	    RANDOM_NOTE=""
+	    attempts=0
+	    while [[ -z "$RANDOM_NOTE" || "$RANDOM_NOTE" == "$OLD_NOTE" ]]; do
+		  RANDOM_NOTE=${NOTES[$((RANDOM % ${#NOTES[@]}))]}
+		  ((attempts++))
+		 
+		  if [[ $attempts -ge 20 ]]; then
+		    break
+		  fi
+	    done
+	 
+	    if [[ "$RANDOM_NOTE" == "$OLD_NOTE" ]]; then
+		  RANDOM_NOTE="test-note-$(date +%s)-$RANDOM"
+	    fi
+		
+		
+	    if [[ -z "$CURRENT_TAGS" || "$CURRENT_TAGS" == "null" ]]; then
+		  FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+	    else
+		  CLEANED=$(remove_note_from_freeform_tags "$CURRENT_TAGS")
+		  if [[ "$CLEANED" =~ ^\{[[:space:]]*\}$ ]]; then
+		    FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
+		  else
+		    FINAL_TAGS=$(echo "$CLEANED" | sed -E "s/}[[:space:]]*\$/,\"note\":\"$RANDOM_NOTE\"}/")
+		  fi
+	    fi
+		
+	    log_action "$TIMESTAMP" "update-tag" "🎯 Updating volume $VOL_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
+		
+	    oci bv volume update \
+		    --volume-id "$VOL_ID" \
+		    --freeform-tags "$FINAL_TAGS" \
+		    --force \
+		    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $VOL_NAME with note=$RANDOM_NOTE" "success" \
+		    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $VOL_NAME" "fail"
 	fi
-	
-	
-	if [[ -z "$CURRENT_TAGS" || "$CURRENT_TAGS" == "null" ]]; then
-	  FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
-	else
-	  CLEANED=$(remove_note_from_freeform_tags "$CURRENT_TAGS")
-	  if [[ "$CLEANED" =~ ^\{[[:space:]]*\}$ ]]; then
-	    FINAL_TAGS="{\"note\":\"$RANDOM_NOTE\"}"
-	  else
-	    FINAL_TAGS=$(echo "$CLEANED" | sed -E "s/}[[:space:]]*\$/,\"note\":\"$RANDOM_NOTE\"}/")
-	  fi
-	fi
-	
-	log_action "$TIMESTAMP" "update-tag" "🎯 Updating volume $VOL_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
-	
-	oci bv volume update \
-	    --volume-id "$VOL_ID" \
-	    --freeform-tags "$FINAL_TAGS" \
-	    --force \
-	    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $VOL_NAME with note=$RANDOM_NOTE" "success" \
-	    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $VOL_NAME" "fail"
       ;;
 
       job13_update_bucket_resource_tag)

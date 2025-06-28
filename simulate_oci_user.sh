@@ -325,7 +325,7 @@ run_job() {
             oci network subnet delete --subnet-id "$subnet_id" --force \
               && log_action "$TIMESTAMP" "delete-subnet" "Deleted subnet $subnet_id in $VCN_NAME" "success" \
               || log_action "$TIMESTAMP" "delete-subnet" "❌ Failed to delete subnet $subnet_id" "fail"
-            sleep_random 1 5
+            sleep_random 2 10
           done
 
           
@@ -336,7 +336,7 @@ run_job() {
               && log_action "$TIMESTAMP" "delete-igw" "Deleted IGW $igw_id in $VCN_NAME" "success" \
               || log_action "$TIMESTAMP" "delete-igw" "❌ Failed to delete IGW $igw_id" "fail"
           done
-
+	  sleep_random 2 10
           
           ROUTES=$(oci network route-table list --compartment-id "$TENANCY_OCID" --vcn-id "$VCN_ID" \
             --query "data[].id" --raw-output)

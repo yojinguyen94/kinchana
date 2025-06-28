@@ -165,11 +165,8 @@ run_job() {
       BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
                 --query "data[].name" \
                 --raw-output)
-      
-      if [[ -z "$BUCKETS" || "$BUCKETS" == "[]" ]]; then
-        log_action "$TIMESTAMP" "auto-delete-bucket" "❌ No bucket found" "404"
-      else
-        for b in $(parse_json_array_string "$BUCKETS"); do
+
+      for b in $(parse_json_array_string "$BUCKETS"); do
             DELETE_DATE=$(oci os bucket get --bucket-name "$b" \
                           --query 'data."defined-tags".auto."auto-delete-date"' \
                           --raw-output 2>/dev/null)
@@ -190,8 +187,7 @@ run_job() {
                 && log_action "$TIMESTAMP" "auto-delete" "Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
                 || log_action "$TIMESTAMP" "auto-delete" "❌ Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
             fi
-        done
-      fi
+      done
       ;;
 
     job5_list_resources)

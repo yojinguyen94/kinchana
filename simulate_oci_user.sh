@@ -334,15 +334,15 @@ run_job() {
           done
 	  sleep_random 2 10
           
-          ROUTES=$(oci network route-table list --compartment-id "$TENANCY_OCID" --vcn-id "$VCN_ID" \
-            --query "data[].id" --raw-output)
-          for route_id in $(parse_json_array_string "$ROUTES"); do
-            oci network route-table delete --rt-id "$route_id" --force \
-              && log_action "$TIMESTAMP" "delete-route" "Deleted Route Table $route_id" "success" \
-              || log_action "$TIMESTAMP" "delete-route" "❌ Failed to delete Route Table $route_id" "fail"
-          done
+          #ROUTES=$(oci network route-table list --compartment-id "$TENANCY_OCID" --vcn-id "$VCN_ID" \
+          #  --query "data[].id" --raw-output)
+          #for route_id in $(parse_json_array_string "$ROUTES"); do
+          #  oci network route-table delete --rt-id "$route_id" --force \
+          #    && log_action "$TIMESTAMP" "delete-route" "Deleted Route Table $route_id" "success" \
+          #    || log_action "$TIMESTAMP" "delete-route" "❌ Failed to delete Route Table $route_id" "fail"
+          #done
 
-          sleep_random 2 10
+          #sleep_random 2 10
           oci network vcn delete --vcn-id "$VCN_ID" --force \
             && log_action "$TIMESTAMP" "auto-delete-vcn" "Deleted VCN $VCN_NAME (expired: $DELETE_DATE)" "success" \
             || log_action "$TIMESTAMP" "auto-delete-vcn" "❌ Failed to delete VCN $VCN_NAME" "fail"

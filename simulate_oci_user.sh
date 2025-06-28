@@ -389,9 +389,7 @@ run_job() {
         log_action "$TIMESTAMP" "scan" "✅ Found auto-delete VCN: $v" "info"
       done
 
-      TAGGED_VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" \
-  		--query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].\"display-name\"" \
-  		--raw-output)
+      TAGGED_VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].\"display-name\"" --raw-output)
       for v in $(parse_json_array_string "$TAGGED_VOLS"); do
         log_action "$TIMESTAMP" "scan" "✅ Found auto-delete Volume: $v" "info"
       done
@@ -453,9 +451,7 @@ run_job() {
       sleep_random 2 10
       log_action "$TIMESTAMP" "auto-delete-volume" "🔍 Scanning for expired block volumes" "start"
 
-      VOLUMES=$(oci bv volume list --compartment-id "$TENANCY_OCID" \
-  		--query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"display-name\",id:id}" \
-  		--raw-output)
+      VOLUMES=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"display-name\",id:id}" --raw-output)
 
       parse_json_array "$VOLUMES" | while IFS='|' read -r VOL_ID VOL_NAME; do
         DELETE_DATE=$(oci bv volume get --volume-id "$VOL_ID" \
@@ -505,9 +501,7 @@ run_job() {
       job12_update_volume_resource_tag)
 	log_action "$TIMESTAMP" "update-tag" "🔍 Scanning volumes for tagging..." "start"
 
-	VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" \
-		  --query "data[?\"lifecycle-state\"!='TERMINATED'].{id:id, name:\"display-name\"}" \
-		  --raw-output)
+	VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"lifecycle-state\"!='TERMINATED'].{id:id, name:\"display-name\"}" --raw-output)
 	
 	VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
 	if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then

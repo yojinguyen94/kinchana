@@ -558,6 +558,10 @@ for i in $(seq 1 $COUNT); do
   sleep_random 3 20
 done
 
+RAN_JOBS=("${SHUFFLED[@]:0:$COUNT}")
+LOG_JOBS=$(printf "%s, " "${RAN_JOBS[@]}")
+LOG_JOBS=${LOG_JOBS%, }  # remove trailing comma
+
 echo "✅ OCI simulation done: $COUNT job(s) run"
 echo "✅ Log saved to: $CSV_LOG and $JSON_LOG"
-log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $COUNT job(s) run" "done"
+log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $COUNT job(s) run: $LOG_JOBS" "done"

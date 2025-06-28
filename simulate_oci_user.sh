@@ -215,14 +215,13 @@ run_job() {
 
       log_action "$TIMESTAMP" "vcn-create" "Creating VCN $VCN_NAME with auto-delete" "start"
       VCN_ID=$(oci network vcn create \
-        --cidr-block "10.0.0.0/16" \
-        --compartment-id "$TENANCY_OCID" \
-        --display-name "$VCN_NAME" \
-        --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-        --query "data.id" --raw-output 2>/dev/null)
-
-      if [ -n "$VCN_ID" ]; then
-        log_action "$TIMESTAMP" "vcn-create" "Created VCN $VCN_NAME ($VCN_ID)" "success"
+	  --cidr-block "10.0.0.0/16" \
+	  --compartment-id "$TENANCY_OCID" \
+	  --display-name "$VCN_NAME" \
+	  --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+	  --query "data.id" --raw-output 2> vcn_error.log)
+      if [[ -n "$VCN_ID" ]]; then
+        log_action "$TIMESTAMP" "vcn-create" "Created VCN $VCN_NAME ($VCN_ID) with auto-delete-date=$DELETE_DATE" "success"
         sleep_random 2 10
 
         SUBNET_ID=$(oci network subnet create \
@@ -232,7 +231,7 @@ run_job() {
           --display-name "$SUBNET_NAME" \
           --availability-domain "$(oci iam availability-domain list --query "data[0].name" --raw-output)" \
           --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-          --query "data.id" --raw-output 2>/dev/null)
+          --query "data.id" --raw-output 2> vcn_subnet_error.log)
 
         if [ -n "$SUBNET_ID" ]; then
           log_action "$TIMESTAMP" "subnet-create" "Created Subnet $SUBNET_NAME" "success"
@@ -242,6 +241,7 @@ run_job() {
       else
         log_action "$TIMESTAMP" "vcn-create" "❌ Failed to create VCN $VCN_NAME" "fail"
       fi
+      #rm -f vcn_error.log
       ;;
 
     job7_create_volume)
@@ -252,19 +252,19 @@ run_job() {
       DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
 
       log_action "$TIMESTAMP" "volume-create" "Creating volume $VOL_NAME with auto-delete" "start"
-      VOL_ID=$(oci bv volume create \
+      VCN_ID=$(oci bv volume create \
         --compartment-id "$TENANCY_OCID" \
         --display-name "$VOL_NAME" \
         --size-in-gbs 50 \
         --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
         --availability-domain "$(oci iam availability-domain list --query "data[0].name" --raw-output)" \
-        --query "data.id" --raw-output 2>/dev/null)
-
+        --query "data.id" --raw-output 2> vol_error.log)
       if [ -n "$VOL_ID" ]; then
-        log_action "$TIMESTAMP" "volume-create" "Created volume $VOL_NAME ($VOL_ID)" "success"
+        log_action "$TIMESTAMP" "volume-create" "Created volume $VOL_NAME ($VOL_ID) with auto-delete-date=$DELETE_DATE" "success"
       else
         log_action "$TIMESTAMP" "volume-create" "❌ Failed to create volume $VOL_NAME" "fail"
       fi
+      #rm -f vol_error.log
       ;;
 
     job8_check_public_ip)

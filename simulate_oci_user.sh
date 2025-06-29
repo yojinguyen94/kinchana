@@ -7,6 +7,59 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 LOG_DIR="$HOME/oci-activity-logs"
 CSV_LOG="$LOG_DIR/oci_activity_log.csv"
 JSON_LOG="$LOG_DIR/oci_activity_log.json"
+NOTES=(
+  "backup-required"
+  "migrated-from-vm"
+  "user-tagged"
+  "important-bucket"
+  "temp-data"
+  "attached-to-db"
+  "daily-check"
+  "bucket-active"
+  "test-note"
+  "deprecated"
+  "do-not-delete"
+  "auto-created"
+  "manual-review-needed"
+  "high-priority"
+  "compliance-checked"
+  "pci-audit"
+  "shared-resource"
+  "project-alpha"
+  "project-beta"
+  "monthly-report"
+  "archive-in-progress"
+  "security-reviewed"
+  "owner-john"
+  "owner-anna"
+  "training-purpose"
+  "qa-verified"
+  "staging-env"
+  "production-env"
+  "dev-env"
+  "snapshot-present"
+  "billing-tracked"
+  "critical-system"
+  "waiting-cleanup"
+  "monitor-enabled"
+  "network-attached"
+  "iam-linked"
+  "old-version"
+  "v2-updated"
+  "for-disaster-recovery"
+  "temp-migration"
+  "resource-locked"
+  "customer-data"
+  "internal-use-only"
+  "sandbox-env"
+  "devops-managed"
+  "test-suite"
+  "performance-benchmark"
+  "restored-from-backup"
+  "cross-region"
+  "test-run-2025"
+  "dr-environment"
+)
 
 mkdir -p "$LOG_DIR"
 
@@ -512,10 +565,6 @@ run_job() {
 	    VOL_ID="${SELECTED%%|*}"
 	    VOL_NAME="${SELECTED##*|}"
 		
-		# Random note value
-	    NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-volume" \
-		       "temp-data" "attached-to-db" "daily-check" "volume-active" "test-note")
-		
 	    CURRENT_TAGS=$(oci bv volume get --volume-id "$VOL_ID" \
 		    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)
 	 
@@ -574,10 +623,6 @@ run_job() {
            readarray -t BUCKET_ARRAY <<< "$ITEMS"
            RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
            BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
-		
-           # Random note value
-           NOTES=("backup-required" "migrated-from-vm" "user-tagged" "important-bucket" \
-		       "temp-data" "attached-to-db" "daily-check" "bucket-active" "test-note")
 		
            CURRENT_TAGS=$(oci os bucket get --bucket-name "$BUCKET_NAME" \
 		    --query "data.\"freeform-tags\"" --raw-output 2>/dev/null)

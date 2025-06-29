@@ -232,7 +232,7 @@ run_job() {
 	ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
 	BUCKET_NAME="$(shuf -n 1 -e app-logs media-assets db-backup invoice-data user-files)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-	DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 5)) days")
+	DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
 	log_action "$TIMESTAMP" "bucket-create" "🎯 Creating bucket $BUCKET_NAME with auto-delete" "start"
 	oci os bucket create \
 	        --name "$BUCKET_NAME" \
@@ -289,7 +289,7 @@ run_job() {
 	}"
       )
 	
-      local NUM_UPLOADS=$((RANDOM % 3 + 1)) # 1–3 files
+      local NUM_UPLOADS=$((RANDOM % 5 + 1)) # 1–5 files
 	
       for ((i = 1; i <= NUM_UPLOADS; i++)); do
 	local FILE_TEMPLATE=${FILENAME_PATTERNS[$((RANDOM % ${#FILENAME_PATTERNS[@]}))]}
@@ -360,7 +360,7 @@ run_job() {
 
       VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
+      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
 
       log_action "$TIMESTAMP" "vcn-create" "🎯 Creating VCN $VCN_NAME with auto-delete" "start"
       VCN_ID=$(oci network vcn create \
@@ -398,7 +398,7 @@ run_job() {
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
       VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
+      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
 
       log_action "$TIMESTAMP" "volume-create" "🎯 Creating volume $VOL_NAME with auto-delete" "start"
       VOL_ID=$(oci bv volume create \
@@ -528,7 +528,7 @@ run_job() {
       	BUCKET_EXISTS=$(oci os bucket get --bucket-name "$DEPLOY_BUCKET" --query 'data.name' --raw-output 2>/dev/null)
 
 	if [ -z "$BUCKET_EXISTS" ]; then
-	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 3)) days")
+	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
 	  oci os bucket create \
 	    --name "$DEPLOY_BUCKET" \
 	    --compartment-id "$TENANCY_OCID" \

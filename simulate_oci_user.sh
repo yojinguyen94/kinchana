@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # === CONFIG ===
+START_TIME=$(date +%s.%N)
 TENANCY_OCID=$(awk -F'=' '/^tenancy=/{print $2}' ~/.oci/config)
 DAY=$(date +%d)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
@@ -891,4 +892,13 @@ LOG_JOBS=${LOG_JOBS%, }  # remove trailing comma
 
 echo "✅ OCI simulation done: $COUNT job(s) run"
 echo "✅ Log saved to: $CSV_LOG and $JSON_LOG"
-log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $COUNT job(s) run: $LOG_JOBS" "done"
+END_TIME=$(date +%s.%N)
+TOTAL_TIME=$(echo "$END_TIME - $START_TIME" | bc)
+if (( $(echo "$TOTAL_TIME >= 60" | bc -l) )); then
+  MINUTES=$(echo "$TOTAL_TIME / 60" | bc)
+  SECONDS=$(echo "$TOTAL_TIME - ($MINUTES * 60)" | bc)
+  TOTAL_TIME_FORMATTED="${MINUTES}m $(printf '%.2f' "$SECONDS")s"
+else
+  TOTAL_TIME_FORMATTED="$(printf '%.2f' "$TOTAL_TIME")s"
+fi
+log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $COUNT job(s) run: $LOG_JOBS in $TOTAL_TIME_FORMATTED" "done"

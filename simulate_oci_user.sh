@@ -187,10 +187,10 @@ generate_fake_project_files() {
     '#!/bin/bash\necho "Deploying..."\ntar -czf build.tar.gz .\noci os object put --bucket-name "$DEPLOY_BUCKET" --name "$FOLDER/build.tar.gz" --file build.tar.gz'
   )
 
-  COUNT=$((RANDOM % 5 + 3))  # Random 3–7 files
+  local COUNT_FILE=$((RANDOM % 5 + 3))  # Random 3–7 files
   USED_INDEXES=()
 
-  for ((i = 0; i < COUNT; i++)); do
+  for ((i = 0; i < COUNT_FILE; i++)); do
     while :; do
       IDX=$((RANDOM % ${#FILE_POOL[@]}))
       if [[ ! " ${USED_INDEXES[@]} " =~ " ${IDX} " ]]; then
@@ -1055,7 +1055,7 @@ fi
 
 # === Randomly select number of jobs to run ===
 TOTAL_JOBS=19
-COUNT=$((RANDOM % TOTAL_JOBS + 1))
+JOB_COUNT=$((RANDOM % TOTAL_JOBS + 1))
 
 ALL_JOBS=(
   job1_list_iam
@@ -1081,18 +1081,18 @@ ALL_JOBS=(
 
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
-for i in $(seq 1 $COUNT); do
+for i in $(seq 1 $JOB_COUNT); do
   FUNC="${SHUFFLED[$((i-1))]}"
   echo "▶️ Running: $FUNC"
   "$FUNC"
   sleep_random 3 15
 done
 
-RAN_JOBS=("${SHUFFLED[@]:0:$COUNT}")
+RAN_JOBS=("${SHUFFLED[@]:0:$JOB_COUNT}")
 LOG_JOBS=$(printf "%s, " "${RAN_JOBS[@]}")
 LOG_JOBS=${LOG_JOBS%, }  # remove trailing comma
 
-echo "✅ OCI simulation done: $COUNT job(s) run"
+echo "✅ OCI simulation done: $JOB_COUNT job(s) run"
 echo "✅ Log saved to: $CSV_LOG and $JSON_LOG"
 END_TIME=$(date +%s.%N)
 TOTAL_TIME=$(echo "$END_TIME - $START_TIME" | bc)
@@ -1103,4 +1103,4 @@ if (( $(echo "$TOTAL_TIME >= 60" | bc -l) )); then
 else
   TOTAL_TIME_FORMATTED="$(printf '%.2f' "$TOTAL_TIME")s"
 fi
-log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $COUNT job(s) run: $LOG_JOBS in $TOTAL_TIME_FORMATTED" "done"
+log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $JOB_COUNT job(s) run: $LOG_JOBS in $TOTAL_TIME_FORMATTED" "done"

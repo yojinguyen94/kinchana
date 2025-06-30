@@ -206,9 +206,16 @@ generate_fake_project_files() {
 }
 
 random_password() {
-  local LENGTH=${1:-16}
-  tr -dc 'A-Za-z0-9!@#$%^&*_=+-' </dev/urandom | head -c "$LENGTH"
-  echo
+  local UPPER=$(tr -dc 'A-Z' </dev/urandom | head -c1)
+  local LOWER=$(tr -dc 'a-z' </dev/urandom | head -c1)
+  local DIGIT=$(tr -dc '0-9' </dev/urandom | head -c1)
+  local SPECIAL=$(tr -dc '!@#%^_+=-' </dev/urandom | head -c1)
+  local REST_LENGTH=$((16 - 4))
+
+  local REST=$(tr -dc 'A-Za-z0-9!@#%^_+=-' </dev/urandom | head -c"$REST_LENGTH")
+  local RAW="${UPPER}${LOWER}${DIGIT}${SPECIAL}${REST}"
+
+  echo "$(echo "$RAW" | fold -w1 | shuf | tr -d '\n')"
 }
 
 # === Run a single job ===
@@ -894,7 +901,7 @@ run_job() {
 	local DB_NAME_PART="${PREFIXES[RANDOM % ${#PREFIXES[@]}]}-${FUNCTIONS[RANDOM % ${#FUNCTIONS[@]}]}-${SUFFIXES[RANDOM % ${#SUFFIXES[@]}]}-$(uuidgen | cut -c1-6)"
 	local DB_NAME=$(echo "$DB_NAME_PART" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
 	local DISPLAY_NAME="${DB_NAME_PART^}"
-	local ADMIN_PASSWORD=$(random_password 20)
+	local ADMIN_PASSWORD=$(random_password)
 
 	# Check available eCPU quota for Paid Autonomous Database
 	local ECPU_AVAILABLE=$(oci limits resource-availability get \

@@ -136,11 +136,10 @@ if [ "$LAST_RUN_DATE" != "$DATE" ]; then
 fi
 
 if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" -eq 0 ]]; then
-  # Enforce 1-hour cooldown
   if [ -f "$STATE_FILE" ]; then
     LAST_RUN_TS=$(stat -c %Y "$STATE_FILE")
     NOW_TS=$(date +%s)
-    COOLDOWN=$(( RANDOM % 3601 + 3600 ))
+    COOLDOWN=$(( RANDOM % 5401 + 5400 ))
     if (( NOW_TS - LAST_RUN_TS < COOLDOWN )); then
       COOLDOWN_MIN=$(( COOLDOWN / 60 ))
       echo "$UTC_NOW [$ZONE - $HOUR - $RUN_COUNT - $RANDOM_CHANCE] ⏭ Skipped (cooldown < ${COOLDOWN_MIN} min)" >> "$LOG"

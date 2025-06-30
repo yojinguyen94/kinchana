@@ -468,16 +468,32 @@ run_job() {
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
-      VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days") # 0-7d
+      local VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      local DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 5)) days") # 0-5d
+      local AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
+      
+      local AVAILABLE_STORAGE=$(oci limits resource-availability get \
+	  --service-name block-storage \
+	  --limit-name total-storage-gb \
+	  --compartment-id "$TENANCY_OCID" \
+	  --availability-domain "$AD" \
+	  --query "data.available" \
+	  --raw-output)
+      
+      log_action "$TIMESTAMP" "volume-create" "📦 Available Block Volume Storage: ${AVAILABLE_STORAGE} GB" "info"
+
+      if [[ "$AVAILABLE_STORAGE" -lt 50 ]]; then
+	  log_action "$TIMESTAMP" "volume-create" "⚠️ Skipped: only $AVAILABLE_STORAGE GB left" "skipped"
+	  return
+      fi
 
       log_action "$TIMESTAMP" "volume-create" "🎯 Creating volume $VOL_NAME with auto-delete" "start"
-      VOL_ID=$(oci bv volume create \
+      local VOL_ID=$(oci bv volume create \
         --compartment-id "$TENANCY_OCID" \
         --display-name "$VOL_NAME" \
         --size-in-gbs 50 \
         --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-        --availability-domain "$(oci iam availability-domain list --query "data[0].name" --raw-output)" \
+        --availability-domain "$AD" \
         --query "data.id" --raw-output 2> vol_error.log)
       if [ -n "$VOL_ID" ]; then
         log_action "$TIMESTAMP" "volume-create" "✅ Created volume $VOL_NAME ($VOL_ID) with auto-delete-date=$DELETE_DATE" "success"
@@ -737,23 +753,68 @@ run_job() {
       ;;
 
       job14_edit_volume)
-           log_action "$TIMESTAMP" "edit-volume-size" "🔍 Scanning volumes with auto-delete=true for edit size..." "start"
-
-           local VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{id:id, name:\"display-name\"}" --raw-output)
+	log_action "$TIMESTAMP" "edit-volume-size" "🔍 Scanning volumes with auto-delete=true for edit size..." "start"
 	
-           local VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
-           if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
-	    log_action "$TIMESTAMP" "edit-volume-size" "❌ No volumes with auto-delete=true found to edit size" "skip"
-           else
-	    local SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
-	    local SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
-	    local VOL_ID="${SELECTED%%|*}"
-	    local VOL_NAME="${SELECTED##*|}"
-     	    local SIZE_GB=$((50 + RANDOM % 51))  # 50–100 GB
-     	    oci bv volume update --volume-id "$VOL_ID" --size-in-gbs "$SIZE_GB" \
-		    && log_action "$TIMESTAMP" "edit-volume-size" "✅ Volume $VOL_NAME resized to ${SIZE_GB}GB" "success" \
-		    || log_action "$TIMESTAMP" "edit-volume-size" "❌ Failed to resize volume $VOL_NAME to ${SIZE_GB}GB" "fail"
-           fi
+	local VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" \
+	  --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{id:id, name:\"display-name\"}" \
+	  --raw-output)
+	
+	local VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
+	
+	if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
+	  log_action "$TIMESTAMP" "edit-volume-size" "❌ No volumes with auto-delete=true found to edit size" "skip"
+	else
+	  local AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
+	
+	  local AVAILABLE_STORAGE=$(oci limits resource-availability get \
+	    --service-name block-storage \
+	    --limit-name total-storage-gb \
+	    --compartment-id "$TENANCY_OCID" \
+	    --availability-domain "$AD" \
+	    --query "data.available" \
+	    --raw-output)
+	
+	  log_action "$TIMESTAMP" "edit-volume-size" "📦 Available Block Volume Storage: ${AVAILABLE_STORAGE} GB" "info"
+	
+	  if [[ "$AVAILABLE_STORAGE" -lt 60 ]]; then
+	    log_action "$TIMESTAMP" "edit-volume-size" "⚠️ Skipped: not enough storage (need ≥60 GB, available: $AVAILABLE_STORAGE)" "skipped"
+	    return
+	  fi
+	
+	  local SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
+	  local SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
+	  local VOL_ID="${SELECTED%%|*}"
+	  local VOL_NAME="${SELECTED##*|}"
+	
+	  local MAX_SIZE=100
+	
+	  local CURRENT_SIZE=$(oci bv volume get --volume-id "$VOL_ID" --query 'data."size-in-gbs"' --raw-output)
+	  local MIN_SIZE=$CURRENT_SIZE
+	
+	  local LIMIT_MAX=$(( AVAILABLE_STORAGE - 1 ))
+	  if [[ "$LIMIT_MAX" -gt "$MAX_SIZE" ]]; then
+	  	LIMIT_MAX=$MAX_SIZE
+	  fi
+	
+	  if [[ "$CURRENT_SIZE" -ge "$LIMIT_MAX" ]]; then
+	  	log_action "$TIMESTAMP" "edit-volume-size" "⚠️ Skipped: $VOL_NAME already at ${CURRENT_SIZE}GB ≥ allowed max ${LIMIT_MAX}GB" "skipped"
+	  	return
+	  fi
+	
+	  local LOWER_BOUND=$(( CURRENT_SIZE + 1 > MIN_SIZE ? CURRENT_SIZE + 1 : MIN_SIZE ))
+
+	  if [[ "$LIMIT_MAX" -lt "$LOWER_BOUND" ]]; then
+	  	log_action "$TIMESTAMP" "edit-volume-size" "⚠️ Skipped: Not enough room to resize $VOL_NAME (current: $CURRENT_SIZE GB)" "skipped"
+	  	return
+	  fi
+	
+	  local SIZE_GB=$(( LOWER_BOUND + RANDOM % (LIMIT_MAX - LOWER_BOUND + 1) ))
+	
+	  # Proceed with resize
+	  oci bv volume update --volume-id "$VOL_ID" --size-in-gbs "$SIZE_GB" \
+	    && log_action "$TIMESTAMP" "edit-volume-size" "✅ Volume $VOL_NAME resized from ${CURRENT_SIZE}GB to ${SIZE_GB}GB" "success" \
+	    || log_action "$TIMESTAMP" "edit-volume-size" "❌ Failed to resize $VOL_NAME to ${SIZE_GB}GB" "fail"
+	fi
       ;;
       
       job15_create_dynamic_group)
@@ -990,6 +1051,7 @@ fi
 
 # === Randomly select number of jobs to run ===
 TOTAL_JOBS=19
+TOTAL_JOBS=1
 COUNT=$((RANDOM % TOTAL_JOBS + 1))
 ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_bucket job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_bucket job12_update_volume_resource_tag job13_update_bucket_resource_tag job14_edit_volume job15_create_dynamic_group job16_delete_dynamic_group job17_create_autonomous_db job18_delete_autonomous_db job19_toggle_autonomous_db)
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))

@@ -218,27 +218,25 @@ random_password() {
   echo "$(echo "$RAW" | fold -w1 | shuf | tr -d '\n')"
 }
 
-# === Run a single job ===
-run_job() {
-  case "$1" in
-    job1_list_iam)
+
+job1_list_iam() {
       log_action "$TIMESTAMP" "info" "List IAM info" "start"
       sleep_random 1 10
       oci iam region-subscription list && log_action "$TIMESTAMP" "region" "✅ List region subscription" "success"
       sleep_random 1 20
       oci iam availability-domain list && log_action "$TIMESTAMP" "availability-domain" "✅ List availability domains" "success"
-      ;;
+}
 
-    job2_check_quota)
+job2_check_quota() {
       AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
       sleep_random 1 30
       oci limits resource-availability get --service-name compute \
         --limit-name standard-e2-core-count \
         --availability-domain "$AD" \
         --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "quota" "✅ Get compute quota" "success"
-      ;;
+}
 
-    job3_upload_random_files_to_bucket)
+job3_upload_random_files_to_bucket() {
       BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
 	    --query "data[].name" --raw-output)
 
@@ -386,9 +384,9 @@ run_job() {
 	rm -f "$FILE_NAME"
 	sleep_random 2 8
       done
-      ;;
+}
 
-    job4_cleanup_bucket)
+job4_cleanup_bucket() {
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -419,9 +417,9 @@ run_job() {
                 || log_action "$TIMESTAMP" "bucket-delete" "❌ Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
             fi
       done
-      ;;
+}
 
-    job5_list_resources)
+job5_list_resources() {
       log_action "$TIMESTAMP" "resource-view" "🔍 List common resources" "start"
       sleep_random 1 30
       oci network vcn list --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "vcn-list" "✅ List VCNs" "success"
@@ -429,10 +427,11 @@ run_job() {
       oci network subnet list --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "subnet-list" "✅ List subnets" "success"
       sleep_random 1 60
       oci compute image list --compartment-id "$TENANCY_OCID" --all --query 'data[0:3].{name:"display-name"}' && log_action "$TIMESTAMP" "image-list" "✅ List images" "success"
-      ;;
-    
-    job6_create_vcn)
-      ensure_namespace_auto
+ 
+}
+
+job6_create_vcn() {
+     ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
 
@@ -469,9 +468,9 @@ run_job() {
         log_action "$TIMESTAMP" "vcn-create" "❌ Failed to create VCN $VCN_NAME" "fail"
       fi
       #rm -f vcn_error.log
-      ;;
+}
 
-    job7_create_volume)
+job7_create_volume() {
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -508,9 +507,9 @@ run_job() {
         log_action "$TIMESTAMP" "volume-create" "❌ Failed to create volume $VOL_NAME" "fail"
       fi
       #rm -f vol_error.log
-      ;;
+}
 
-    job8_check_public_ip)
+job8_check_public_ip() {
       log_action "$TIMESTAMP" "network-info" "🎯 Checking public IPs" "start"
       sleep_random 2 8
       oci network public-ip list \
@@ -519,9 +518,9 @@ run_job() {
         --query "data[].\"ip-address\"" --raw-output \
         && log_action "$TIMESTAMP" "public-ip" "✅ Listed public IPs" "success" \
         || log_action "$TIMESTAMP" "public-ip" "❌ Failed to list public IPs" "fail"
-      ;;
+}
 
-    job9_scan_auto_delete_resources)
+job9_scan_auto_delete_resources(){
       ensure_namespace_auto
       log_action "$TIMESTAMP" "scan-auto-delete" "🔍 Scanning resources with auto-delete tag" "start"
       TAGGED_BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
@@ -540,9 +539,9 @@ run_job() {
       for v in $(parse_json_array_string "$TAGGED_VOLS"); do
         log_action "$TIMESTAMP" "scan" "✅ Found auto-delete Volume: $v" "info"
       done
-      ;;
+}
 
-    job10_cleanup_vcn_and_volumes)
+job10_cleanup_vcn_and_volumes() {
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -610,10 +609,10 @@ run_job() {
             || log_action "$TIMESTAMP" "delete-volume" "❌ Failed to delete volume $VOL_NAME" "fail"
         fi
       done
-      ;;
-      
-      job11_deploy_bucket)
-      	ensure_namespace_auto
+}
+
+job11_deploy_bucket() {
+     	ensure_namespace_auto
         ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
  	DEPLOY_BUCKET="$(shuf -n 1 -e deploy-artifacts deployment-store deploy-backup pipeline-output release-bucket)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
@@ -641,9 +640,9 @@ run_job() {
     		log_action "$TIMESTAMP" "bucket-deploy" "❌ Failed to upload $DEPLOY_FILE to $DEPLOY_BUCKET" "fail"
 	
 	rm -rf deploy_tmp "$DEPLOY_FILE"
-      ;;
+}
 
-      job12_update_volume_resource_tag)
+job12_update_volume_resource_tag() {
 	log_action "$TIMESTAMP" "update-volume-tag" "🔍 Scanning volumes for tagging..." "start"
 
 	VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"lifecycle-state\"!='TERMINATED'].{id:id, name:\"display-name\"}" --raw-output)
@@ -699,9 +698,9 @@ run_job() {
 		    && log_action "$TIMESTAMP" "update-volume-tag" "✅ Updated tag for $VOL_NAME with note=$RANDOM_NOTE" "success" \
 		    || log_action "$TIMESTAMP" "update-volume-tag" "❌ Failed to update tag for $VOL_NAME" "fail"
 	fi
-      ;;
+}
 
-      job13_update_bucket_resource_tag)
+job13_update_bucket_resource_tag() {
 	log_action "$TIMESTAMP" "update-bucket-tag" "🔍 Scanning bucket for tagging..." "start"
 
 	BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
@@ -757,9 +756,9 @@ run_job() {
 		    && log_action "$TIMESTAMP" "update-bucket-tag" "✅ Updated tag for $BUCKET_NAME with note=$RANDOM_NOTE" "success" \
 		    || log_action "$TIMESTAMP" "update-bucket-tag" "❌ Failed to update tag for $BUCKET_NAME" "fail"
 	fi
-      ;;
+}
 
-      job14_edit_volume)
+job14_edit_volume() {
 	log_action "$TIMESTAMP" "edit-volume-size" "🔍 Scanning volumes with auto-delete=true for edit size..." "start"
 	
 	local VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" \
@@ -822,9 +821,9 @@ run_job() {
 	    && log_action "$TIMESTAMP" "edit-volume-size" "✅ Volume $VOL_NAME resized from ${CURRENT_SIZE}GB to ${SIZE_GB}GB" "success" \
 	    || log_action "$TIMESTAMP" "edit-volume-size" "❌ Failed to resize $VOL_NAME to ${SIZE_GB}GB" "fail"
 	fi
-      ;;
-      
-      job15_create_dynamic_group)
+}
+
+job15_create_dynamic_group() {
 	  ensure_namespace_auto
 	  ensure_tag "auto-delete" "Mark for auto deletion"
 	  ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -869,9 +868,9 @@ run_job() {
 	  else
 	    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create dynamic group '$DG_NAME'" "error"
 	  fi
-      ;;
+}
 
-      job16_delete_dynamic_group)
+job16_delete_dynamic_group() {
 	log_action "$TIMESTAMP" "delete-dynamic-group" "🔍 Scanning for expired dynamic group" "start"
 	local TODAY=$(date +%Y-%m-%d)
 	local ITEMS=$(oci iam dynamic-group list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"name\",id:id}" --raw-output)
@@ -887,9 +886,9 @@ run_job() {
             		|| log_action "$TIMESTAMP" "delete-dynamic-group" "❌ Failed to delete dynamic group $ITEM_NAME" "fail"
         	fi
         done
-      ;;
-      
-      job17_create_autonomous_db)
+}
+
+job17_create_autonomous_db() {
 	ensure_namespace_auto
 	ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -961,9 +960,9 @@ run_job() {
 		    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create paid DB '$DISPLAY_NAME'" "error"
 		fi
 	fi
-      ;;
-      
-      job18_delete_autonomous_db)
+}
+
+job18_delete_autonomous_db() {
 	log_action "$TIMESTAMP" "delete-autonomous-db" "🔍 Scanning for expired autonomous db" "start"
 	local NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 	local ITEMS=$(oci db autonomous-database list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"display-name\",id:id}" --raw-output)
@@ -982,9 +981,9 @@ run_job() {
 			}
         	fi
         done
-      ;;
+}
 
-      job19_toggle_autonomous_db)
+job19_toggle_autonomous_db() {
 	  local JOB_NAME="toggle_autonomous_db"
 	
 	  local DBS=$(oci db autonomous-database list \
@@ -1045,8 +1044,6 @@ run_job() {
 		  sed -i "/^$DB_OCID|/d" "$ACTION_LOG_FILE" 2>/dev/null
 		  echo "$DB_OCID|$TIMESTAMP" >> "$ACTION_LOG_FILE"
 	  fi
-      ;;
-  esac
 }
 
 # === Session Check ===
@@ -1059,12 +1056,36 @@ fi
 # === Randomly select number of jobs to run ===
 TOTAL_JOBS=19
 COUNT=$((RANDOM % TOTAL_JOBS + 1))
-ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_bucket job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_bucket job12_update_volume_resource_tag job13_update_bucket_resource_tag job14_edit_volume job15_create_dynamic_group job16_delete_dynamic_group job17_create_autonomous_db job18_delete_autonomous_db job19_toggle_autonomous_db)
+
+ALL_JOBS=(
+  job1_list_iam
+  job2_check_quota
+  job3_upload_random_files_to_bucket
+  job4_cleanup_bucket
+  job5_list_resources
+  job6_create_vcn
+  job7_create_volume
+  job8_check_public_ip
+  job9_scan_auto_delete_resources
+  job10_cleanup_vcn_and_volumes
+  job11_deploy_bucket
+  job12_update_volume_resource_tag
+  job13_update_bucket_resource_tag
+  job14_edit_volume
+  job15_create_dynamic_group
+  job16_delete_dynamic_group
+  job17_create_autonomous_db
+  job18_delete_autonomous_db
+  job19_toggle_autonomous_db
+)
+
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
 for i in $(seq 1 $COUNT); do
-  run_job "${SHUFFLED[$((i-1))]}"
-  sleep_random 3 20
+  FUNC="${SHUFFLED[$((i-1))]}"
+  echo "▶️ Running: $FUNC"
+  "$FUNC"
+  sleep_random 3 15
 done
 
 RAN_JOBS=("${SHUFFLED[@]:0:$COUNT}")

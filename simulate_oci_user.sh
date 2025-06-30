@@ -8,6 +8,7 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 LOG_DIR="$HOME/oci-activity-logs"
 CSV_LOG="$LOG_DIR/oci_activity_log.csv"
 JSON_LOG="$LOG_DIR/oci_activity_log.json"
+ACTION_LOG_FILE="/tmp/oci_adb_action_log.txt"
 NOTES=(
   "backup-required"
   "migrated-from-vm"
@@ -147,11 +148,20 @@ parse_json_array_string() {
 
 parse_json_array() {
   local json_input="$1"
-  echo "$json_input" | tr -d '\n' | sed -E 's/^\[//; s/\]$//' | sed 's/},[[:space:]]*{/\}\n\{/g' | while IFS= read -r line || [[ -n "$line" ]]; do
+  echo "$json_input" | tr -d '\n' | \
+    sed -E 's/^\[//; s/\]$//' | \
+    sed 's/},[[:space:]]*{/\}\n\{/g' | \
+  while IFS= read -r line || [[ -n "$line" ]]; do
     ID=$(echo "$line" | grep -oP '"id"\s*:\s*"\K[^"]+')
     NAME=$(echo "$line" | grep -oP '"name"\s*:\s*"\K[^"]+')
+    STATE=$(echo "$line" | grep -oP '"state"\s*:\s*"\K[^"]+')
+
     if [[ -n "$ID" && -n "$NAME" ]]; then
-      echo "$ID|$NAME"
+      if [[ -n "$STATE" ]]; then
+        echo "$ID|$NAME|$STATE"
+      else
+        echo "$ID|$NAME"
+      fi
     fi
   done
 }
@@ -239,7 +249,7 @@ run_job() {
 	ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
 	BUCKET_NAME="$(shuf -n 1 -e app-logs media-assets db-backup invoice-data user-files)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-	DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
+	DELETE_DATE=$(date +%Y-%m-%d --date="+$((2 + RANDOM % 9)) days") # 2-10d
 	log_action "$TIMESTAMP" "bucket-create" "🎯 Creating bucket $BUCKET_NAME with auto-delete" "start"
 	oci os bucket create \
 	        --name "$BUCKET_NAME" \
@@ -421,7 +431,7 @@ run_job() {
 
       VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
+      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days") # 0-7d
 
       log_action "$TIMESTAMP" "vcn-create" "🎯 Creating VCN $VCN_NAME with auto-delete" "start"
       VCN_ID=$(oci network vcn create \
@@ -459,7 +469,7 @@ run_job() {
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
       VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
+      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days") # 0-7d
 
       log_action "$TIMESTAMP" "volume-create" "🎯 Creating volume $VOL_NAME with auto-delete" "start"
       VOL_ID=$(oci bv volume create \
@@ -587,7 +597,7 @@ run_job() {
       	BUCKET_EXISTS=$(oci os bucket get --bucket-name "$DEPLOY_BUCKET" --query 'data.name' --raw-output 2>/dev/null)
 
 	if [ -z "$BUCKET_EXISTS" ]; then
-	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days")
+	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((1 + RANDOM % 7 + 2)) days") # 3-9d
 	  oci os bucket create \
 	    --name "$DEPLOY_BUCKET" \
 	    --compartment-id "$TENANCY_OCID" \
@@ -781,7 +791,7 @@ run_job() {
 	
 	  local DG_NAME="dg-${USER}-${PURPOSE}-$((100 + RANDOM % 900))"
 	  local DESCRIPTION="Dynamic group for ${USER}'s ${PURPOSE} tasks"
-	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 15)) days")
+	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((1 + RANDOM % 15)) days") #1 - 15d
 	  if oci iam dynamic-group create \
 	    --name "$DG_NAME" \
 	    --description "$DESCRIPTION" \
@@ -811,7 +821,7 @@ run_job() {
         done
       ;;
       
-      job17_create_paid_autonomous_db)
+      job17_create_autonomous_db)
 	ensure_namespace_auto
 	ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -823,33 +833,70 @@ run_job() {
 	local DB_NAME_PART="${PREFIXES[RANDOM % ${#PREFIXES[@]}]}-${FUNCTIONS[RANDOM % ${#FUNCTIONS[@]}]}-${SUFFIXES[RANDOM % ${#SUFFIXES[@]}]}-$(uuidgen | cut -c1-6)"
 	local DB_NAME=$(echo "$DB_NAME_PART" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
 	local DISPLAY_NAME="${DB_NAME_PART^}"
-	
-	local CPU_COUNT=$((2 + RANDOM % 2))  # 2–3 ECPU
-	local STORAGE_TB=$((1 + RANDOM % 2))  # 1–2 TB
-	
-	local RANDOM_HOURS=$((6 + RANDOM % 7))  # 6 ≤ H ≤ 12
-	local DELETE_DATE=$(date -u -d "+$RANDOM_HOURS hours" '+%Y-%m-%dT%H:%M:%SZ')
 	local ADMIN_PASSWORD=$(random_password 20)
-	if oci db autonomous-database create \
-	    --compartment-id "$TENANCY_OCID" \
-	    --db-name "$DB_NAME" \
-	    --display-name "$DISPLAY_NAME" \
-	    --admin-password "$ADMIN_PASSWORD" \
-	    --compute-count "$CPU_COUNT" \
-     	    --compute-model ECPU \
-	    --data-storage-size-in-tbs "$STORAGE_TB" \
-	    --db-workload DW \
-	    --license-model LICENSE_INCLUDED \
-	    --is-free-tier false \
-	    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}'; then
-	    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created paid DB '$DISPLAY_NAME' (${CPU_COUNT} ECPU, ${STORAGE_TB}TB), auto-delete at $DELETE_DATE" "success"
+
+	# Check available eCPU quota for Paid Autonomous Database
+	local ECPU_AVAILABLE=$(oci limits resource-availability get \
+	  --service-name database \
+	  --limit-name adw-ecpu-count \
+	  --compartment-id "$TENANCY_OCID" \
+	  --query "data.available" \
+	  --raw-output)
+	if [[ "$ECPU_AVAILABLE" -eq 0 ]]; then
+		  log_action "$TIMESTAMP" "create-free-autonomous-db" "⚠️ No remaining eCPU quota → attempting to create an Always Free Autonomous DB..." "info"
+		  # Count existing Free Autonomous Databases
+		  local FREE_DB_COUNT=$(oci db autonomous-database list \
+		    --compartment-id "$TENANCY_OCID" \
+		    --query "length(data[?\"is-free-tier\"==\`true\`])" \
+		    --all --raw-output)
+		
+		  if [[ "$FREE_DB_COUNT" -lt 2 ]]; then
+      		    log_action "$TIMESTAMP" "create-free-autonomous-db" "✅ $FREE_DB_COUNT Free ADB(s) detected → proceeding to create a new Free ADB" "info"
+		    local RANDOM_HOURS=$((24 + RANDOM % 97))  # 24 ≤ H ≤ 120
+		    local DELETE_DATE=$(date -u -d "+$RANDOM_HOURS hours" '+%Y-%m-%dT%H:%M:%SZ')
+		    # Create the Always Free Autonomous Database
+		    oci db autonomous-database create \
+			--compartment-id "$TENANCY_OCID" \
+			--db-name "$DB_NAME" \
+			--display-name "$DISPLAY_NAME" \
+			--admin-password "$ADMIN_PASSWORD" \
+			--db-workload DW \
+			--license-model LICENSE_INCLUDED \
+			--is-free-tier true \
+			--defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+		    && log_action "$TIMESTAMP" "create-free-autonomous-db" "✅ Created Free ADB: $DISPLAY_NAME" "success" \
+		    || log_action "$TIMESTAMP" "create-free-autonomous-db" "❌ Failed to create Free ADB" "fail"
+		
+		  else
+		    log_action "$TIMESTAMP" "create-free-autonomous-db" "⚠️ Skipped: already have $FREE_DB_COUNT Free ADBs" "skipped"
+		  fi
 	else
-	    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create paid DB '$DISPLAY_NAME'" "error"
+    		log_action "$TIMESTAMP" "$JOB_NAME" "✅ Sufficient eCPU quota ($ECPU_AVAILABLE) → creating Paid Autonomous DB..." "info"
+	  	local CPU_COUNT=$((2 + RANDOM % 2))  # 2–3 ECPU
+		local STORAGE_TB=$((1 + RANDOM % 2))  # 1–2 TB
+  		local RANDOM_HOURS=$((12 + RANDOM % 37))  # 12 ≤ H ≤ 48
+		local DELETE_DATE=$(date -u -d "+$RANDOM_HOURS hours" '+%Y-%m-%dT%H:%M:%SZ')
+		if oci db autonomous-database create \
+		    --compartment-id "$TENANCY_OCID" \
+		    --db-name "$DB_NAME" \
+		    --display-name "$DISPLAY_NAME" \
+		    --admin-password "$ADMIN_PASSWORD" \
+		    --compute-count "$CPU_COUNT" \
+		    --compute-model ECPU \
+		    --data-storage-size-in-tbs "$STORAGE_TB" \
+		    --db-workload DW \
+		    --license-model LICENSE_INCLUDED \
+		    --is-free-tier false \
+		    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}'; then
+		    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created paid DB '$DISPLAY_NAME' (${CPU_COUNT} ECPU, ${STORAGE_TB}TB), auto-delete at $DELETE_DATE" "success"
+		else
+		    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create paid DB '$DISPLAY_NAME'" "error"
+		fi
 	fi
       ;;
       
-      job18_delete_paid_autonomous_db)
-	log_action "$TIMESTAMP" "delete-paid-autonomous-db" "🔍 Scanning for expired paid autonomous db" "start"
+      job18_delete_autonomous_db)
+	log_action "$TIMESTAMP" "delete-autonomous-db" "🔍 Scanning for expired autonomous db" "start"
 	local NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 	local ITEMS=$(oci db autonomous-database list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"display-name\",id:id}" --raw-output)
 
@@ -859,11 +906,77 @@ run_job() {
           	--raw-output 2>/dev/null)
         	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$NOW" +%s) ]]; then
           		sleep_random 1 10
-          		oci db autonomous-database delete --autonomous-database-id "$ITEM_ID" --force \
-            		&& log_action "$TIMESTAMP" "delete-paid-autonomous-db" "✅ Deleted paid autonomous db $ITEM_NAME (expired: $DELETE_DATE)" "success" \
-            		|| log_action "$TIMESTAMP" "delete-paid-autonomous-db" "❌ Failed to delete paid autonomous db $ITEM_NAME" "fail"
+			oci db autonomous-database delete --autonomous-database-id "$ITEM_ID" --force && {
+			    log_action "$TIMESTAMP" "delete-autonomous-db" "✅ Deleted autonomous db $ITEM_NAME (expired: $DELETE_DATE)" "success"
+			    sed -i "/^$ITEM_ID|/d" "$ACTION_LOG_FILE" 2>/dev/null
+			} || {
+			    log_action "$TIMESTAMP" "delete-autonomous-db" "❌ Failed to delete autonomous db $ITEM_NAME" "fail"
+			}
         	fi
         done
+      ;;
+
+      job19_toggle_autonomous_db)
+	  local JOB_NAME="toggle_autonomous_db"
+	
+	  local DBS=$(oci db autonomous-database list \
+	    --compartment-id "$TENANCY_OCID" \
+	    --query "data[?\"lifecycle-state\"=='AVAILABLE' || \"lifecycle-state\"=='STOPPED'].{id:id, name:\"display-name\", state:\"lifecycle-state\"}" \
+	    --raw-output)
+
+	  local DB_COUNT=$(echo "$DBS" | grep -c '"id"')
+	  if [[ -z "$DBS" || "$DB_COUNT" -eq 0 ]]; then
+		  log_action "$TIMESTAMP" "$JOB_NAME" "❌ No DB found to toggle" "skip"
+	  else
+		  local SELECTED_LINE=$((RANDOM % DB_COUNT + 1))
+		  local SELECTED=$(parse_json_array "$DBS" | sed -n "${SELECTED_LINE}p")
+		  IFS='|' read -r DB_OCID DB_NAME DB_STATE <<< "$SELECTED"
+		
+		  local LAST_TIME_LINE=$(grep "^$DB_OCID|" "$ACTION_LOG_FILE" 2>/dev/null)
+		  local LAST_TS=$(echo "$LAST_TIME_LINE" | cut -d'|' -f2)
+		
+		  local NOW_EPOCH=$(date -u +%s)
+		  local LAST_EPOCH=0
+		
+		  if [[ -n "$LAST_TS" ]]; then
+		    LAST_EPOCH=$(date -d "$LAST_TS" +%s)
+		  fi
+		
+		  local HOURS_DIFF=$(( (NOW_EPOCH - LAST_EPOCH) / 3600 ))
+		
+		  if [[ "$HOURS_DIFF" -lt 4 ]]; then
+		    log_action "$TIMESTAMP" "$JOB_NAME" "⏱ DB '$DB_NAME' last toggled $HOURS_DIFF hour(s) ago < 4h — skip" "skipped"
+		    return
+		  fi
+		
+		  if [[ "$HOURS_DIFF" -lt 10 && $((RANDOM % 2)) -eq 0 ]]; then
+		    log_action "$TIMESTAMP" "$JOB_NAME" "🤏 Waiting for more time before toggling '$DB_NAME' ($HOURS_DIFF hours)" "delayed"
+		    return
+		  fi
+		
+		  local ACTION=$((RANDOM % 2))
+		
+		  if [[ "$ACTION" -eq 0 && "$DB_STATE" == "AVAILABLE" ]]; then
+			  if oci db autonomous-database stop --autonomous-database-id "$DB_OCID" --wait-for-state STOPPED; then
+			    log_action "$TIMESTAMP" "$JOB_NAME" "🛑 Stopped Autonomous DB '$DB_NAME'" "success"
+			  else
+			    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to stop Autonomous DB '$DB_NAME'" "fail"
+			  fi
+		
+		  elif [[ "$ACTION" -eq 1 && "$DB_STATE" == "STOPPED" ]]; then
+			  if oci db autonomous-database start --autonomous-database-id "$DB_OCID" --wait-for-state AVAILABLE; then
+			    log_action "$TIMESTAMP" "$JOB_NAME" "▶️ Started Autonomous DB '$DB_NAME'" "success"
+			  else
+			    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to start Autonomous DB '$DB_NAME'" "fail"
+			  fi
+		  else
+			  log_action "$TIMESTAMP" "$JOB_NAME" "⏩ DB '$DB_NAME' already in desired state" "skipped"
+			  return
+		  fi
+		
+		  sed -i "/^$DB_OCID|/d" "$ACTION_LOG_FILE" 2>/dev/null
+		  echo "$DB_OCID|$TIMESTAMP" >> "$ACTION_LOG_FILE"
+	  fi
       ;;
   esac
 }
@@ -876,9 +989,9 @@ else
 fi
 
 # === Randomly select number of jobs to run ===
-TOTAL_JOBS=18
+TOTAL_JOBS=19
 COUNT=$((RANDOM % TOTAL_JOBS + 1))
-ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_bucket job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_bucket job12_update_volume_resource_tag job13_update_bucket_resource_tag job14_edit_volume job15_create_dynamic_group job16_delete_dynamic_group job17_create_paid_autonomous_db job18_delete_paid_autonomous_db)
+ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_bucket job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_bucket job12_update_volume_resource_tag job13_update_bucket_resource_tag job14_edit_volume job15_create_dynamic_group job16_delete_dynamic_group job17_create_autonomous_db job18_delete_autonomous_db job19_toggle_autonomous_db)
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
 for i in $(seq 1 $COUNT); do

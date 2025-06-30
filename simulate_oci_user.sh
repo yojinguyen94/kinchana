@@ -1080,17 +1080,15 @@ ALL_JOBS=(
 )
 
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
+LOG_JOBS=()
 
 for i in $(seq 1 $JOB_COUNT); do
   FUNC="${SHUFFLED[$((i-1))]}"
   echo "▶️ Running: $FUNC"
+  LOG_JOBS+=("$FUNC")
   "$FUNC"
   sleep_random 3 15
 done
-
-RAN_JOBS=("${SHUFFLED[@]:0:$JOB_COUNT}")
-LOG_JOBS=$(printf "%s, " "${RAN_JOBS[@]}")
-LOG_JOBS=${LOG_JOBS%, }  # remove trailing comma
 
 echo "✅ OCI simulation done: $JOB_COUNT job(s) run"
 echo "✅ Log saved to: $CSV_LOG and $JSON_LOG"
@@ -1103,4 +1101,4 @@ if (( $(echo "$TOTAL_TIME >= 60" | bc -l) )); then
 else
   TOTAL_TIME_FORMATTED="$(printf '%.2f' "$TOTAL_TIME")s"
 fi
-log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $JOB_COUNT job(s) run: $LOG_JOBS in $TOTAL_TIME_FORMATTED" "done"
+log_action "$TIMESTAMP" "simulate" "✅ OCI simulation done: $JOB_COUNT job(s) run: $(printf "%s, " "${LOG_JOBS[@]}" | sed 's/, $//') in $TOTAL_TIME_FORMATTED" "done"

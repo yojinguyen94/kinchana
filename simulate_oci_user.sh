@@ -1051,7 +1051,6 @@ fi
 
 # === Randomly select number of jobs to run ===
 TOTAL_JOBS=19
-TOTAL_JOBS=1
 COUNT=$((RANDOM % TOTAL_JOBS + 1))
 ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_bucket job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_bucket job12_update_volume_resource_tag job13_update_bucket_resource_tag job14_edit_volume job15_create_dynamic_group job16_delete_dynamic_group job17_create_autonomous_db job18_delete_autonomous_db job19_toggle_autonomous_db)
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))

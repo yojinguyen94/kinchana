@@ -194,6 +194,12 @@ generate_fake_project_files() {
   done
 }
 
+random_password() {
+  local LENGTH=${1:-16}
+  tr -dc 'A-Za-z0-9!@#$%^&*_=+-' </dev/urandom | head -c "$LENGTH"
+  echo
+}
+
 # === Run a single job ===
 run_job() {
   case "$1" in
@@ -354,9 +360,9 @@ run_job() {
 	echo "$FILE_CONTENT" > "$FILE_NAME"
 	
 	if oci os object put --bucket-name "$BUCKET_NAME" --file "$FILE_NAME" --force; then
-	   log_action "$TIMESTAMP" "bucket_upload" "✅ Uploaded $FILE_NAME to $BUCKET_NAME" "success"
+	   log_action "$TIMESTAMP" "bucket-upload" "✅ Uploaded $FILE_NAME to $BUCKET_NAME" "success"
 	else
-	   log_action "$TIMESTAMP" "bucket_upload" "❌ Failed to upload $FILE_NAME to $BUCKET_NAME" "fail"
+	   log_action "$TIMESTAMP" "bucket-upload" "❌ Failed to upload $FILE_NAME to $BUCKET_NAME" "fail"
 	fi
 	
 	rm -f "$FILE_NAME"
@@ -364,7 +370,7 @@ run_job() {
       done
       ;;
 
-    job4_cleanup_auto_delete)
+    job4_cleanup_bucket_auto_delete)
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -378,22 +384,21 @@ run_job() {
             DELETE_DATE=$(oci os bucket get --bucket-name "$b" \
                           --query 'data."defined-tags".auto."auto-delete-date"' \
                           --raw-output 2>/dev/null)
-            log_action "$TIMESTAMP" "auto-delete-bucket" "✅ Found auto-delete BUCKET: $b - DELETE_DATE: $DELETE_DATE" "info"
             sleep_random 1 10
-            if [[ -n "$DELETE_DATE" && "$DELETE_DATE" < "$TODAY" ]]; then
-              log_action "$TIMESTAMP" "delete-object" "🗑️ Deleting all objects in $b..." "start"
+            if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+              log_action "$TIMESTAMP" "bucket-delete-object" "🗑️ Deleting all objects in $b..." "start"
             
               OBJECTS=$(oci os object list --bucket-name "$b" --query "data[].name" --raw-output)
               for obj in $(parse_json_array_string "$OBJECTS"); do
                 oci os object delete --bucket-name "$b" --name "$obj" --force \
-                  && log_action "$TIMESTAMP" "delete-object" "✅ Deleted "$obj" from $b" "success" \
-                  || log_action "$TIMESTAMP" "delete-object" "❌ Failed to delete "$obj" from $b" "fail"
+                  && log_action "$TIMESTAMP" "bucket-delete-object" "✅ Deleted "$obj" from $b" "success" \
+                  || log_action "$TIMESTAMP" "bucket-delete-object" "❌ Failed to delete "$obj" from $b" "fail"
                 sleep_random 2 5
               done
               sleep_random 2 10
               oci os bucket delete --bucket-name "$b" --force \
-                && log_action "$TIMESTAMP" "auto-delete" "✅ Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
-                || log_action "$TIMESTAMP" "auto-delete" "❌ Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
+                && log_action "$TIMESTAMP" "bucket-delete" "✅ Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
+                || log_action "$TIMESTAMP" "bucket-delete" "❌ Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"
             fi
       done
       ;;
@@ -438,9 +443,9 @@ run_job() {
           --query "data.id" --raw-output 2> vcn_subnet_error.log)
 
         if [ -n "$SUBNET_ID" ]; then
-          log_action "$TIMESTAMP" "subnet-create" "✅ Created Subnet $SUBNET_NAME" "success"
+          log_action "$TIMESTAMP" "vcn-subnet-create" "✅ Created Subnet $SUBNET_NAME" "success"
         else
-          log_action "$TIMESTAMP" "subnet-create" "❌ Failed to create Subnet $SUBNET_NAME" "fail"
+          log_action "$TIMESTAMP" "vcn-subnet-create" "❌ Failed to create Subnet $SUBNET_NAME" "fail"
         fi
       else
         log_action "$TIMESTAMP" "vcn-create" "❌ Failed to create VCN $VCN_NAME" "fail"
@@ -509,7 +514,7 @@ run_job() {
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
       TODAY=$(date +%Y-%m-%d)
 
-      log_action "$TIMESTAMP" "auto-delete-vcn" "🔍 Scanning for expired VCNs" "start"
+      log_action "$TIMESTAMP" "delete-vcn" "🔍 Scanning for expired VCNs" "start"
 
       VCNs=$(oci network vcn list --compartment-id "$TENANCY_OCID" \
         --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].{name:\"display-name\",id:id}" \
@@ -519,7 +524,6 @@ run_job() {
         DELETE_DATE=$(oci network vcn get --vcn-id "$VCN_ID" \
           --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           --raw-output 2>/dev/null)
-        log_action "$TIMESTAMP" "auto-delete-vcn" "✅ Found auto-delete VCN: $VCN_NAME - DELETE_DATE: $DELETE_DATE" "info"
         if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
           log_action "$TIMESTAMP" "auto-delete-vcn" "🎯 Preparing to delete VCN $VCN_NAME" "start"
           SUBNETS=$(oci network subnet list --compartment-id "$TENANCY_OCID" --vcn-id "$VCN_ID" \
@@ -551,13 +555,13 @@ run_job() {
 
           #sleep_random 2 10
           oci network vcn delete --vcn-id "$VCN_ID" --force \
-            && log_action "$TIMESTAMP" "auto-delete-vcn" "✅ Deleted VCN $VCN_NAME (expired: $DELETE_DATE)" "success" \
-            || log_action "$TIMESTAMP" "auto-delete-vcn" "❌ Failed to delete VCN $VCN_NAME" "fail"
+            && log_action "$TIMESTAMP" "delete-vcn" "✅ Deleted VCN $VCN_NAME (expired: $DELETE_DATE)" "success" \
+            || log_action "$TIMESTAMP" "delete-vcn" "❌ Failed to delete VCN $VCN_NAME" "fail"
         fi
       done
 
       sleep_random 2 10
-      log_action "$TIMESTAMP" "auto-delete-volume" "🔍 Scanning for expired block volumes" "start"
+      log_action "$TIMESTAMP" "delete-volume" "🔍 Scanning for expired block volumes" "start"
 
       VOLUMES=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"display-name\",id:id}" --raw-output)
 
@@ -565,12 +569,11 @@ run_job() {
         DELETE_DATE=$(oci bv volume get --volume-id "$VOL_ID" \
           --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           --raw-output 2>/dev/null)
-        log_action "$TIMESTAMP" "auto-delete-volume" "✅ Found auto-delete VOLUME: $VOL_NAME - DELETE_DATE: $DELETE_DATE" "info"
         if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
           sleep_random 1 10
           oci bv volume delete --volume-id "$VOL_ID" --force \
-            && log_action "$TIMESTAMP" "auto-delete-volume" "✅ Deleted volume $VOL_NAME (expired: $DELETE_DATE)" "success" \
-            || log_action "$TIMESTAMP" "auto-delete-volume" "❌ Failed to delete volume $VOL_NAME" "fail"
+            && log_action "$TIMESTAMP" "delete-volume" "✅ Deleted volume $VOL_NAME (expired: $DELETE_DATE)" "success" \
+            || log_action "$TIMESTAMP" "delete-volume" "❌ Failed to delete volume $VOL_NAME" "fail"
         fi
       done
       ;;
@@ -600,20 +603,20 @@ run_job() {
   	FOLDER="deploy/$(date +%Y-%m-%d)"
 	
   	oci os object put --bucket-name "$DEPLOY_BUCKET" --name "$FOLDER/$DEPLOY_FILE" --file "$DEPLOY_FILE" --force && \
-    		log_action "$TIMESTAMP" "deploy" "✅ Uploaded $DEPLOY_FILE to $DEPLOY_BUCKET/$FOLDER" "success" || \
-    		log_action "$TIMESTAMP" "deploy" "❌ Failed to upload $DEPLOY_FILE to $DEPLOY_BUCKET" "fail"
+    		log_action "$TIMESTAMP" "bucket-deploy" "✅ Uploaded $DEPLOY_FILE to $DEPLOY_BUCKET/$FOLDER" "success" || \
+    		log_action "$TIMESTAMP" "bucket-deploy" "❌ Failed to upload $DEPLOY_FILE to $DEPLOY_BUCKET" "fail"
 	
 	rm -rf deploy_tmp "$DEPLOY_FILE"
       ;;
 
       job12_update_volume_resource_tag)
-	log_action "$TIMESTAMP" "update-tag" "🔍 Scanning volumes for tagging..." "start"
+	log_action "$TIMESTAMP" "update-volume-tag" "🔍 Scanning volumes for tagging..." "start"
 
 	VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"lifecycle-state\"!='TERMINATED'].{id:id, name:\"display-name\"}" --raw-output)
 	
 	VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
 	if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
-	    log_action "$TIMESTAMP" "update-tag" "❌ No volumes found to tag" "skip"
+	    log_action "$TIMESTAMP" "update-volume-tag" "❌ No volumes found to tag" "skip"
      	else
 	    SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
 	    SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
@@ -653,26 +656,26 @@ run_job() {
 		  fi
 	    fi
 		
-	    log_action "$TIMESTAMP" "update-tag" "🎯 Updating volume $VOL_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
+	    log_action "$TIMESTAMP" "update-volume-tag" "🎯 Updating volume $VOL_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
 		
 	    oci bv volume update \
 		    --volume-id "$VOL_ID" \
 		    --freeform-tags "$FINAL_TAGS" \
 		    --force \
-		    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $VOL_NAME with note=$RANDOM_NOTE" "success" \
-		    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $VOL_NAME" "fail"
+		    && log_action "$TIMESTAMP" "update-volume-tag" "✅ Updated tag for $VOL_NAME with note=$RANDOM_NOTE" "success" \
+		    || log_action "$TIMESTAMP" "update-volume-tag" "❌ Failed to update tag for $VOL_NAME" "fail"
 	fi
       ;;
 
       job13_update_bucket_resource_tag)
-	log_action "$TIMESTAMP" "update-tag" "🔍 Scanning bucket for tagging..." "start"
+	log_action "$TIMESTAMP" "update-bucket-tag" "🔍 Scanning bucket for tagging..." "start"
 
 	BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
 	    --query "data[].name" --raw-output)
 	
 	BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
 	if [[ -z "$BUCKETS" || "$BUCKET_COUNT" -eq 0 ]]; then
-	   log_action "$TIMESTAMP" "update-tag" "❌ No buckets found to tag" "skip"
+	   log_action "$TIMESTAMP" "update-bucket-tag" "❌ No buckets found to tag" "skip"
      	else
       	   ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
            readarray -t BUCKET_ARRAY <<< "$ITEMS"
@@ -712,14 +715,154 @@ run_job() {
 	       fi
            fi
 		
-           log_action "$TIMESTAMP" "update-tag" "🎯 Updating bucket $BUCKET_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
+           log_action "$TIMESTAMP" "update-bucket-tag" "🎯 Updating bucket $BUCKET_NAME with note=$RANDOM_NOTE (preserve tags)" "start"
 		
            oci os bucket update \
 	  	    --bucket-name "$BUCKET_NAME" \
 		    --freeform-tags "$FINAL_TAGS" \
-		    && log_action "$TIMESTAMP" "update-tag" "✅ Updated tag for $BUCKET_NAME with note=$RANDOM_NOTE" "success" \
-		    || log_action "$TIMESTAMP" "update-tag" "❌ Failed to update tag for $BUCKET_NAME" "fail"
+		    && log_action "$TIMESTAMP" "update-bucket-tag" "✅ Updated tag for $BUCKET_NAME with note=$RANDOM_NOTE" "success" \
+		    || log_action "$TIMESTAMP" "update-bucket-tag" "❌ Failed to update tag for $BUCKET_NAME" "fail"
 	fi
+      ;;
+
+      job14_edit_volume)
+           log_action "$TIMESTAMP" "edit-volume-size" "🔍 Scanning volumes with auto-delete=true for edit size..." "start"
+
+           local VOLS=$(oci bv volume list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{id:id, name:\"display-name\"}" --raw-output)
+	
+           local VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
+           if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
+	    log_action "$TIMESTAMP" "edit-volume-size" "❌ No volumes with auto-delete=true found to edit size" "skip"
+           else
+	    local SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
+	    local SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
+	    local VOL_ID="${SELECTED%%|*}"
+	    local VOL_NAME="${SELECTED##*|}"
+     	    local SIZE_GB=$((50 + RANDOM % 51))  # 50–100 GB
+     	    oci bv volume update --volume-id "$VOL_ID" --size-in-gbs "$SIZE_GB" \
+		    && log_action "$TIMESTAMP" "edit-volume-size" "✅ Volume $VOL_NAME resized to ${SIZE_GB}GB" "success" \
+		    || log_action "$TIMESTAMP" "edit-volume-size" "❌ Failed to resize volume $VOL_NAME to ${SIZE_GB}GB" "fail"
+           fi
+      ;;
+      
+      job15_create_dynamic_group)
+	  ensure_namespace_auto
+	  ensure_tag "auto-delete" "Mark for auto deletion"
+	  ensure_tag "auto-delete-date" "Scheduled auto delete date"
+	  local JOB_NAME="create-dynamic-group"
+
+	  local USERS=(
+	    "alice" "bob" "charlie" "david" "eva" "frank" "grace" "henry" "ivy" "jack"
+	    "karen" "leo" "mia" "nathan" "olivia" "peter" "quinn" "rachel" "sam" "tina"
+	    "ursula" "victor" "will" "xander" "yuri" "zoe"
+	    "team-alpha" "team-beta" "ops-core" "batch-team" "fintech-dev" "ml-lab"
+	  )
+	
+	  local PURPOSES=(
+	    "devops" "batch-jobs" "analytics" "autoscale" "monitoring" "ai-inference"
+	    "image-processing" "log-ingestion" "internal-api" "customer-reporting"
+	    "vpn-access" "db-backup" "event-stream" "data-export" "incident-response"
+	    "terraform-ci" "cloud-health" "hpc-burst" "data-labeling" "iot-agent"
+	    "threat-detection" "compliance-check" "cost-analysis" "zero-trust-policy"
+	  )
+	
+	  local MATCH_RULES=(
+	    "ALL {resource.type = 'instance', instance.compartment.id = '$TENANCY_OCID'}"
+	    "ALL {resource.type = 'volume', volume.compartment.id = '$TENANCY_OCID'}"
+	    "ANY {resource.type = 'autonomous-database'}"
+	    "ALL {resource.compartment.id = '$TENANCY_OCID'}"
+	    "ALL {resource.type = 'bootvolume'}"
+	  )
+	
+	  local USER="${USERS[RANDOM % ${#USERS[@]}]}"
+	  local PURPOSE="${PURPOSES[RANDOM % ${#PURPOSES[@]}]}"
+	  local RULE="${MATCH_RULES[RANDOM % ${#MATCH_RULES[@]}]}"
+	
+	  local DG_NAME="dg-${USER}-${PURPOSE}-$((100 + RANDOM % 900))"
+	  local DESCRIPTION="Dynamic group for ${USER}'s ${PURPOSE} tasks"
+	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 15)) days")
+	  if oci iam dynamic-group create \
+	    --name "$DG_NAME" \
+	    --description "$DESCRIPTION" \
+     	    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+	    --matching-rule "$RULE"; then
+	    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created dynamic group '$DG_NAME' with purpose '$PURPOSE'" "success"
+	  else
+	    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create dynamic group '$DG_NAME'" "error"
+	  fi
+      ;;
+
+      job16_delete_dynamic_group)
+	log_action "$TIMESTAMP" "delete-dynamic-group" "🔍 Scanning for expired dynamic group" "start"
+	local TODAY=$(date +%Y-%m-%d)
+	local ITEMS=$(oci iam dynamic-group list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"name\",id:id}" --raw-output)
+
+      	parse_json_array "$ITEMS" | while IFS='|' read -r ITEM_ID ITEM_NAME; do
+        	DELETE_DATE=$(oci iam dynamic-group get --dynamic-group-id "$ITEM_ID" \
+          	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
+          	--raw-output 2>/dev/null)
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+          		sleep_random 1 10
+          		oci iam dynamic-group delete --dynamic-group-id "$ITEM_ID" --force \
+            		&& log_action "$TIMESTAMP" "delete-dynamic-group" "✅ Deleted dynamic group $ITEM_NAME (expired: $DELETE_DATE)" "success" \
+            		|| log_action "$TIMESTAMP" "delete-dynamic-group" "❌ Failed to delete dynamic group $ITEM_NAME" "fail"
+        	fi
+        done
+      ;;
+      
+      job17_create_paid_autonomous_db)
+	ensure_namespace_auto
+	ensure_tag "auto-delete" "Mark for auto deletion"
+	ensure_tag "auto-delete-date" "Scheduled auto delete date"
+	local JOB_NAME="create-paid-autonomous-db"
+
+	local PREFIXES=("sales" "ml" "analytics" "prod" "test" "hr" "finance" "dev" "backup" "log" "data" "staging" "ops")
+	local FUNCTIONS=("db" "data" "store" "system" "core" "service" "report" "etl" "dash")
+	local SUFFIXES=("01" "2025" "$((RANDOM % 100))" "$(date +%y)" "$(date +%m%d)")
+	local DB_NAME_PART="${PREFIXES[RANDOM % ${#PREFIXES[@]}]}-${FUNCTIONS[RANDOM % ${#FUNCTIONS[@]}]}-${SUFFIXES[RANDOM % ${#SUFFIXES[@]}]}-$(uuidgen | cut -c1-6)"
+	local DB_NAME=$(echo "$DB_NAME_PART" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
+	local DISPLAY_NAME="${DB_NAME_PART^}"
+	
+	local CPU_COUNT=$((2 + RANDOM % 2))  # 2–3 ECPU
+	local STORAGE_TB=$((1 + RANDOM % 2))  # 1–2 TB
+	
+	local RANDOM_HOURS=$((6 + RANDOM % 7))  # 6 ≤ H ≤ 12
+	local DELETE_DATE=$(date -u -d "+$RANDOM_HOURS hours" '+%Y-%m-%dT%H:%M:%SZ')
+	local ADMIN_PASSWORD=$(random_password 20)
+	if oci db autonomous-database create \
+	    --compartment-id "$TENANCY_OCID" \
+	    --db-name "$DB_NAME" \
+	    --display-name "$DISPLAY_NAME" \
+	    --admin-password "$ADMIN_PASSWORD" \
+	    --compute-count "$CPU_COUNT" \
+     	    --compute-model ECPU \
+	    --data-storage-size-in-tbs "$STORAGE_TB" \
+	    --db-workload DW \
+	    --license-model LICENSE_INCLUDED \
+	    --is-free-tier false \
+	    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}'; then
+	    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created paid DB '$DISPLAY_NAME' (${CPU_COUNT} ECPU, ${STORAGE_TB}TB), auto-delete at $DELETE_DATE" "success"
+	else
+	    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create paid DB '$DISPLAY_NAME'" "error"
+	fi
+      ;;
+      
+      job18_delete_paid_autonomous_db)
+	log_action "$TIMESTAMP" "delete-paid-autonomous-db" "🔍 Scanning for expired paid autonomous db" "start"
+	local NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+	local ITEMS=$(oci db autonomous-database list --compartment-id "$TENANCY_OCID" --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='TERMINATED'].{name:\"display-name\",id:id}" --raw-output)
+
+      	parse_json_array "$ITEMS" | while IFS='|' read -r ITEM_ID ITEM_NAME; do
+        	DELETE_DATE=$(oci db autonomous-database get --autonomous-database-id "$ITEM_ID" \
+          	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
+          	--raw-output 2>/dev/null)
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$NOW" +%s) ]]; then
+          		sleep_random 1 10
+          		oci db autonomous-database delete --autonomous-database-id "$ITEM_ID" --force \
+            		&& log_action "$TIMESTAMP" "delete-paid-autonomous-db" "✅ Deleted paid autonomous db $ITEM_NAME (expired: $DELETE_DATE)" "success" \
+            		|| log_action "$TIMESTAMP" "delete-paid-autonomous-db" "❌ Failed to delete paid autonomous db $ITEM_NAME" "fail"
+        	fi
+        done
       ;;
   esac
 }
@@ -732,9 +875,9 @@ else
 fi
 
 # === Randomly select number of jobs to run ===
-TOTAL_JOBS=13
+TOTAL_JOBS=18
 COUNT=$((RANDOM % TOTAL_JOBS + 1))
-ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_auto_delete job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_simulation job12_update_volume_resource_tag job13_update_bucket_resource_tag)
+ALL_JOBS=(job1_list_iam job2_check_quota job3_upload_random_files_to_bucket job4_cleanup_bucket_auto_delete job5_list_resources job6_create_vcn job7_create_volume job8_check_public_ip job9_scan_auto_delete_resources job10_cleanup_vcn_and_volumes job11_deploy_simulation job12_update_volume_resource_tag job13_update_bucket_resource_tag job14_edit_volume job15_create_dynamic_group job16_delete_dynamic_group job17_create_paid_autonomous_db job18_delete_paid_autonomous_db)
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
 
 for i in $(seq 1 $COUNT); do

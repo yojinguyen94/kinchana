@@ -43,6 +43,7 @@ get_hour_by_zone() {
     us_west)  date -u -d '-7 hour' +%H ;;
     uae)      date -u -d '+4 hour' +%H ;;
     br)       date -u -d '-3 hour' +%H ;;
+    ma)       date -u -d '+1 hour' +%H ;;
     *)        echo "❌ Invalid time zone: $ZONE" >&2; exit 1 ;;
   esac
 }

@@ -1063,12 +1063,12 @@ job19_toggle_autonomous_db() {
 		  local HOURS_DIFF=$(( (NOW_EPOCH - LAST_EPOCH) / 3600 ))
 		
 		  if [[ "$HOURS_DIFF" -lt 4 ]]; then
-		    log_action "$TIMESTAMP" "$JOB_NAME" "⏱ DB '$DB_NAME' last toggled $HOURS_DIFF hour(s) ago < 4h — skip" "skipped"
+		    log_action "$TIMESTAMP" "$JOB_NAME" "⏱ DB '$DB_NAME' ($DB_STATE) last toggled $HOURS_DIFF hour(s) ago < 4h — skip" "skipped"
 		    return
 		  fi
 		
 		  if [[ "$HOURS_DIFF" -lt 10 && $((RANDOM % 2)) -eq 0 ]]; then
-		    log_action "$TIMESTAMP" "$JOB_NAME" "🤏 Waiting for more time before toggling '$DB_NAME' ($HOURS_DIFF hours)" "delayed"
+		    log_action "$TIMESTAMP" "$JOB_NAME" "🤏 Waiting for more time before toggling '$DB_NAME' ($DB_STATE) ($HOURS_DIFF hours)" "delayed"
 		    return
 		  fi
 		
@@ -1088,7 +1088,7 @@ job19_toggle_autonomous_db() {
 			    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to start Autonomous DB '$DB_NAME'" "fail"
 			  fi
 		  else
-			  log_action "$TIMESTAMP" "$JOB_NAME" "⏩ DB '$DB_NAME' already in desired state ($DB_STATE)" "skipped"
+			  log_action "$TIMESTAMP" "$JOB_NAME" "⏩ DB '$DB_NAME' ($DB_STATE) already in desired state" "skipped"
 			  return
 		  fi
 		

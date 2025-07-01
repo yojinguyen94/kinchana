@@ -387,9 +387,6 @@ job3_upload_random_files_to_bucket() {
 }
 
 job4_cleanup_bucket() {
-      ensure_namespace_auto
-      ensure_tag "auto-delete" "Mark for auto deletion"
-      ensure_tag "auto-delete-date" "Scheduled auto delete date"
       log_action "$TIMESTAMP" "auto-delete-scan" "🔍 Scanning for expired buckets with auto-delete=true" "start"
       TODAY=$(date +%Y-%m-%d)
       BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
@@ -483,11 +480,6 @@ job6_create_vcn() {
 }
 
 job7_create_volume() {
-      ensure_namespace_auto
-      ensure_tag "auto-delete" "Mark for auto deletion"
-      ensure_tag "auto-delete-date" "Scheduled auto delete date"
-      local VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      local DELETE_DATE=$(date +%Y-%m-%d --date="+$((3 + RANDOM % 7)) days") # 3-10d
       local AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
       
       local AVAILABLE_STORAGE=$(oci limits resource-availability get \
@@ -504,6 +496,12 @@ job7_create_volume() {
 	  log_action "$TIMESTAMP" "volume-create" "⚠️ Skipped: only $AVAILABLE_STORAGE GB left" "skipped"
 	  return
       fi
+
+      ensure_namespace_auto
+      ensure_tag "auto-delete" "Mark for auto deletion"
+      ensure_tag "auto-delete-date" "Scheduled auto delete date"
+      local VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      local DELETE_DATE=$(date +%Y-%m-%d --date="+$((3 + RANDOM % 7)) days") # 3-10d
 
       log_action "$TIMESTAMP" "volume-create" "🎯 Creating volume $VOL_NAME with auto-delete" "start"
       local VOL_ID=$(oci bv volume create \
@@ -533,7 +531,6 @@ job8_check_public_ip() {
 }
 
 job9_scan_auto_delete_resources(){
-      ensure_namespace_auto
       log_action "$TIMESTAMP" "scan-auto-delete" "🔍 Scanning resources with auto-delete tag" "start"
       TAGGED_BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
         --query "data[?\"defined-tags\".auto.\"auto-delete\"=='true'].name" --raw-output)
@@ -554,10 +551,7 @@ job9_scan_auto_delete_resources(){
 }
 
 job10_cleanup_vcn_and_volumes() {
-      ensure_namespace_auto
-      ensure_tag "auto-delete" "Mark for auto deletion"
-      ensure_tag "auto-delete-date" "Scheduled auto delete date"
-      TODAY=$(date +%Y-%m-%d)
+      local TODAY=$(date +%Y-%m-%d)
 
       log_action "$TIMESTAMP" "delete-vcn" "🔍 Scanning for expired VCNs" "start"
 
@@ -589,16 +583,7 @@ job10_cleanup_vcn_and_volumes() {
               || log_action "$TIMESTAMP" "delete-igw" "❌ Failed to delete IGW $igw_id" "fail"
           done
 	  sleep_random 2 10
-          
-          #ROUTES=$(oci network route-table list --compartment-id "$TENANCY_OCID" --vcn-id "$VCN_ID" \
-          #  --query "data[].id" --raw-output)
-          #for route_id in $(parse_json_array_string "$ROUTES"); do
-          #  oci network route-table delete --rt-id "$route_id" --force \
-          #    && log_action "$TIMESTAMP" "delete-route" "Deleted Route Table $route_id" "success" \
-          #    || log_action "$TIMESTAMP" "delete-route" "❌ Failed to delete Route Table $route_id" "fail"
-          #done
-
-          #sleep_random 2 10
+   
           oci network vcn delete --vcn-id "$VCN_ID" --force \
             && log_action "$TIMESTAMP" "delete-vcn" "✅ Deleted VCN $VCN_NAME (expired: $DELETE_DATE)" "success" \
             || log_action "$TIMESTAMP" "delete-vcn" "❌ Failed to delete VCN $VCN_NAME" "fail"

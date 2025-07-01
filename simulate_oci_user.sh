@@ -909,7 +909,7 @@ job17_create_autonomous_db() {
 	  --compartment-id "$TENANCY_OCID" \
 	  --query "data.available" \
 	  --raw-output)
-	if [[ "$ECPU_AVAILABLE" -eq 0 ]]; then
+	if [[ $ECPU_AVAILABLE -le 0 ]]; then
 		  log_action "$TIMESTAMP" "create-free-autonomous-db" "⚠️ No remaining eCPU quota → attempting to create an Always Free Autonomous DB..." "info"
 		  # Count existing Free Autonomous Databases
 		  local FREE_DB_COUNT=$(oci db autonomous-database list \

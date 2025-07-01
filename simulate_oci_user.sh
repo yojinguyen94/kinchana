@@ -1416,7 +1416,7 @@ for i in $(seq 1 $JOB_COUNT); do
   echo "▶️ Running: $FUNC"
   LOG_JOBS+=("$FUNC")
   "$FUNC"
-  sleep_random 3 15
+  sleep_random 30 60
 done
 
 echo "✅ OCI simulation done: $JOB_COUNT job(s) run"

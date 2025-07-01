@@ -973,12 +973,12 @@ job18_delete_autonomous_db() {
           	--raw-output 2>/dev/null)
         	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$NOW" +%s) ]]; then
           		sleep_random 1 10
-			oci db autonomous-database delete --autonomous-database-id "$ITEM_ID" --force && {
+	    		if oci db autonomous-database delete --autonomous-database-id "$ITEM_ID" --force; then
 			    log_action "$TIMESTAMP" "delete-autonomous-db" "✅ Deleted autonomous db $ITEM_NAME (expired: $DELETE_DATE)" "success"
 			    sed -i "/^$ITEM_ID|/d" "$ACTION_LOG_FILE" 2>/dev/null
-			} || {
+			else
 			    log_action "$TIMESTAMP" "delete-autonomous-db" "❌ Failed to delete autonomous db $ITEM_NAME" "fail"
-			}
+			fi
         	fi
         done
 }

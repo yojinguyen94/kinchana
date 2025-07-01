@@ -1088,7 +1088,7 @@ job19_toggle_autonomous_db() {
 			    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to start Autonomous DB '$DB_NAME'" "fail"
 			  fi
 		  else
-			  log_action "$TIMESTAMP" "$JOB_NAME" "⏩ DB '$DB_NAME' already in desired state" "skipped"
+			  log_action "$TIMESTAMP" "$JOB_NAME" "⏩ DB '$DB_NAME' already in desired state ($DB_STATE)" "skipped"
 			  return
 		  fi
 		

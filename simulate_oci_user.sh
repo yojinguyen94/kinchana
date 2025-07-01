@@ -452,7 +452,7 @@ job4_cleanup_bucket() {
                           --query 'data."defined-tags".auto."auto-delete-date"' \
                           --raw-output 2>/dev/null)
             sleep_random 1 10
-            if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+            if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
               log_action "$TIMESTAMP" "bucket-delete-object" "🗑️ Deleting all objects in $b..." "start"
             
               OBJECTS=$(oci os object list --bucket-name "$b" --query "data[].name" --raw-output)
@@ -617,7 +617,7 @@ job10_cleanup_vcn_and_volumes() {
         DELETE_DATE=$(oci network vcn get --vcn-id "$VCN_ID" \
           --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           --raw-output 2>/dev/null)
-        if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+        if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
           log_action "$TIMESTAMP" "auto-delete-vcn" "🎯 Preparing to delete VCN $VCN_NAME" "start"
           SUBNETS=$(oci network subnet list --compartment-id "$TENANCY_OCID" --vcn-id "$VCN_ID" \
             --query "data[].id" --raw-output)
@@ -653,7 +653,7 @@ job10_cleanup_vcn_and_volumes() {
         DELETE_DATE=$(oci bv volume get --volume-id "$VOL_ID" \
           --query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           --raw-output 2>/dev/null)
-        if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+        if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
           sleep_random 1 10
           oci bv volume delete --volume-id "$VOL_ID" --force \
             && log_action "$TIMESTAMP" "delete-volume" "✅ Deleted volume $VOL_NAME (expired: $DELETE_DATE)" "success" \
@@ -930,7 +930,7 @@ job16_delete_dynamic_group() {
         	DELETE_DATE=$(oci iam dynamic-group get --dynamic-group-id "$ITEM_ID" \
           	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           	--raw-output 2>/dev/null)
-        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
           		sleep_random 1 10
           		oci iam dynamic-group delete --dynamic-group-id "$ITEM_ID" --force \
             		&& log_action "$TIMESTAMP" "delete-dynamic-group" "✅ Deleted dynamic group $ITEM_NAME (expired: $DELETE_DATE)" "success" \
@@ -1022,7 +1022,7 @@ job18_delete_autonomous_db() {
         	DELETE_DATE=$(oci db autonomous-database get --autonomous-database-id "$ITEM_ID" \
           	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           	--raw-output 2>/dev/null)
-        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$NOW" +%s) ]]; then
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$NOW" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
           		sleep_random 2 10
 	    		if oci db autonomous-database delete --autonomous-database-id "$ITEM_ID" --force; then
 			    log_action "$TIMESTAMP" "delete-autonomous-db" "✅ Deleted autonomous db $ITEM_NAME (expired: $DELETE_DATE)" "success"
@@ -1179,7 +1179,7 @@ job21_delete_private_endpoint() {
 		local DELETE_DATE=$(oci os private-endpoint get --pe-name "$ITEM_NAME" \
           	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           	--raw-output 2>/dev/null)
-        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
           		sleep_random 1 10
 	    		if oci os private-endpoint delete --pe-name "$ITEM_NAME" --force; then
 			    log_action "$TIMESTAMP" "delete-private-endpoint" "✅ Deleted private endpoint $ITEM_NAME (expired: $DELETE_DATE)" "success"
@@ -1298,7 +1298,7 @@ job23_delete_nosql_table() {
           	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
 	   	--compartment-id "$TENANCY_OCID" \
           	--raw-output 2>/dev/null)
-        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
           		sleep_random 1 10
 	    		if oci nosql table delete --table-name-or-id "$ITEM_NAME" --compartment-id "$TENANCY_OCID" --force; then
 			    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Deleted nosql table $ITEM_NAME (expired: $DELETE_DATE)" "success"

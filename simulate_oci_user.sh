@@ -1371,11 +1371,11 @@ job24_upload_random_row_to_nosql_table() {
 
 
 # === Session Check ===
-if oci iam user get --user-id "$USER_ID" &> /dev/null; then
-  log_action "$TIMESTAMP" "session" "✅ Get user info" "success"
-else
-  log_action "$TIMESTAMP" "session" "❌ Get user info" "fail"
-fi
+#if oci iam user get --user-id "$USER_ID" &> /dev/null; then
+#  log_action "$TIMESTAMP" "session" "✅ Get user info" "success"
+#else
+#  log_action "$TIMESTAMP" "session" "❌ Get user info" "fail"
+#fi
 
 # === Randomly select number of jobs to run ===
 JOB_COUNT=$((RANDOM % 3 + 1))  # 1–3 job

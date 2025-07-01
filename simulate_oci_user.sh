@@ -437,7 +437,7 @@ job6_create_vcn() {
 
       VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 7)) days") # 0-7d
+      DELETE_DATE=$(date +%Y-%m-%d --date="+$((2 + RANDOM % 9)) days") # 2-10d
 
       log_action "$TIMESTAMP" "vcn-create" "🎯 Creating VCN $VCN_NAME with auto-delete" "start"
       VCN_ID=$(oci network vcn create \
@@ -475,7 +475,7 @@ job7_create_volume() {
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
       local VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      local DELETE_DATE=$(date +%Y-%m-%d --date="+$((RANDOM % 5)) days") # 0-5d
+      local DELETE_DATE=$(date +%Y-%m-%d --date="+$((3 + RANDOM % 7)) days") # 3-10d
       local AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
       
       local AVAILABLE_STORAGE=$(oci limits resource-availability get \
@@ -858,7 +858,7 @@ job15_create_dynamic_group() {
 	
 	  local DG_NAME="dg-${USER}-${PURPOSE}-$((100 + RANDOM % 900))"
 	  local DESCRIPTION="Dynamic group for ${USER}'s ${PURPOSE} tasks"
-	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((1 + RANDOM % 15)) days") #1 - 15d
+	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((3 + RANDOM % 12)) days") #3 - 15d
 	  if oci iam dynamic-group create \
 	    --name "$DG_NAME" \
 	    --description "$DESCRIPTION" \

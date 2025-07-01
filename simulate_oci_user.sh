@@ -970,7 +970,7 @@ job17_create_autonomous_db() {
 		
 		  if [[ "$FREE_DB_COUNT" -lt 2 ]]; then
       		    log_action "$TIMESTAMP" "create-free-autonomous-db" "✅ $FREE_DB_COUNT Free ADB(s) detected → proceeding to create a new Free ADB" "info"
-		    local RANDOM_HOURS=$((24 + RANDOM % 97))  # 24 ≤ H ≤ 120
+		    local RANDOM_HOURS=$((RANDOM % 145 + 24))  # 24 ≤ H ≤ 168
 		    local DELETE_DATE=$(date -u -d "+$RANDOM_HOURS hours" '+%Y-%m-%dT%H:%M:%SZ')
 		    # Create the Always Free Autonomous Database
 		    oci db autonomous-database create \
@@ -992,7 +992,7 @@ job17_create_autonomous_db() {
     		log_action "$TIMESTAMP" "$JOB_NAME" "✅ Sufficient eCPU quota ($ECPU_AVAILABLE) → creating Paid Autonomous DB..." "info"
 	  	local CPU_COUNT=$((2 + RANDOM % 2))  # 2–3 ECPU
 		local STORAGE_TB=$((1 + RANDOM % 2))  # 1–2 TB
-  		local RANDOM_HOURS=$((24 + RANDOM % 97))  # 24 ≤ H ≤ 120
+  		local RANDOM_HOURS=$((RANDOM % 145 + 24))  # 24 ≤ H ≤ 168
 		local DELETE_DATE=$(date -u -d "+$RANDOM_HOURS hours" '+%Y-%m-%dT%H:%M:%SZ')
 		if oci db autonomous-database create \
 		    --compartment-id "$TENANCY_OCID" \

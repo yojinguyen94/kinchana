@@ -1059,9 +1059,6 @@ job19_toggle_autonomous_db() {
 }
 
 job20_create_random_private_endpoint() {
-  ensure_namespace_auto
-  ensure_tag "auto-delete" "Mark for auto deletion"
-  ensure_tag "auto-delete-date" "Scheduled auto delete date"
   local JOB_NAME="create_private_endpoint"
 
   local MAX_PE_LIMIT=10
@@ -1081,6 +1078,10 @@ job20_create_random_private_endpoint() {
     log_action "$TIMESTAMP" "$JOB_NAME" "🤏 Waiting for more time" "delayed"
     return
   fi
+  
+  ensure_namespace_auto
+  ensure_tag "auto-delete" "Mark for auto deletion"
+  ensure_tag "auto-delete-date" "Scheduled auto delete date"
 
   local VCN_LIST=$(oci network vcn list --compartment-id "$TENANCY_OCID" --query "data[].{id:id, name:\"display-name\"}" --raw-output)
 

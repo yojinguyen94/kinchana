@@ -1046,6 +1046,98 @@ job19_toggle_autonomous_db() {
 	  fi
 }
 
+job20_create_random_private_endpoint() {
+  ensure_namespace_auto
+  ensure_tag "auto-delete" "Mark for auto deletion"
+  ensure_tag "auto-delete-date" "Scheduled auto delete date"
+  local JOB_NAME="create_private_endpoint"
+
+  local MAX_PE_LIMIT=10
+	
+  local CURRENT_PE_COUNT=$(oci os private-endpoint list \
+	  --compartment-id "$TENANCY_OCID" \
+	  --query "length(data)" \
+	  --raw-output)
+   
+  if [[ "$CURRENT_PE_COUNT" -ge "$MAX_PE_LIMIT" ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" \
+	    "❌ PE limit reached: $CURRENT_PE_COUNT / $MAX_PE_LIMIT" "skipped"
+    return;
+  fi
+
+  if [[ $((RANDOM % 10)) -eq 0 ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "🤏 Waiting for more time" "delayed"
+    return
+  fi
+
+  local VCN_LIST=$(oci network vcn list --compartment-id "$TENANCY_OCID" --query "data[].{id:id, name:\"display-name\"}" --raw-output)
+
+  local VCN_COUNT=$(echo "$VCN_LIST" | grep -c '"id"')
+  if [[ -z "$VCN_LIST" || "$VCN_COUNT" -eq 0 ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ No VCNs found in compartment" "skip"
+    return;
+  fi
+
+  local VCN_SELECTED_LINE=$((RANDOM % VCN_COUNT + 1))
+  local VCN_SELECTED=$(parse_json_array "$VCN_LIST" | sed -n "${VCN_SELECTED_LINE}p")
+  IFS='|' read -r VCN_ID VCN_NAME <<< "$VCN_SELECTED"
+
+  local SUBNET_LIST=$(oci network subnet list --compartment-id "$TENANCY_OCID" --vcn-id "$VCN_ID" --query "data[].{id:id, name:\"display-name\"}" --raw-output)
+
+  local SUBNET_COUNT=$(echo "$SUBNET_LIST" | grep -c '"id"')
+  if [[ -z "$SUBNET_LIST" || "$SUBNET_COUNT" -eq 0 ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ No subnets found in VCN $VCN_NAME" "skip"
+    return;
+  fi
+
+  local SUBNET_SELECTED_LINE=$((RANDOM % SUBNET_COUNT + 1))
+  local SUBNET_SELECTED=$(parse_json_array "$SUBNET_LIST" | sed -n "${SUBNET_SELECTED_LINE}p")
+  IFS='|' read -r SUBNET_ID SUBNET_NAME <<< "$SUBNET_SELECTED"
+
+  local NAME_PREFIXES=(pe-prod pe-dev pe-db pe-app private-endpoint)
+  local RANDOM_SUFFIX=$(LC_ALL=C tr -dc 'a-z0-9' </dev/urandom | head -c 6)
+  local RANDOM_PREFIX=${NAME_PREFIXES[$RANDOM % ${#NAME_PREFIXES[@]}]}
+  local PE_NAME="${RANDOM_PREFIX}-${RANDOM_SUFFIX}"
+
+  local DELETE_DATE=$(date +%Y-%m-%d --date="+$(( RANDOM % 26 + 5 )) days") #5 - 30d
+
+  local NAMESPACE=$(oci os ns get \
+	  --query "data" \
+	  --raw-output)
+
+  if oci os private-endpoint create \
+    --compartment-id "$TENANCY_OCID" \
+    --subnet-id "$SUBNET_ID" \
+    --prefix "$RANDOM_PREFIX" \
+    --access-targets '[{"namespace":"'${NAMESPACE}'", "compartmentId":"*", "bucket":"*"}]' \
+    --name "$PE_NAME" \
+    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+    --wait-for-state COMPLETED; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created Private Endpoint $PE_NAME in subnet $SUBNET_NAME" "success"
+  else
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create Private Endpoint $PE_NAME" "fail"
+  fi
+}
+
+job21_delete_private_endpoint() {
+	log_action "$TIMESTAMP" "delete-private-endpoint" "🔍 Scanning for expired private endpoint" "start"
+	local TODAY=$(date +%Y-%m-%d)
+	local ITEMS=$(oci os private-endpoint list --compartment-id "$TENANCY_OCID" --query "data[].name" --raw-output)
+	for ITEM_NAME in $(parse_json_array_string "$ITEMS"); do
+		local DELETE_DATE=$(oci os private-endpoint get --pe-name "$ITEM_NAME" \
+          	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
+          	--raw-output 2>/dev/null)
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+          		sleep_random 1 10
+	    		if oci os private-endpoint delete --pe-name "$ITEM_NAME" --force; then
+			    log_action "$TIMESTAMP" "delete-private-endpoint" "✅ Deleted private endpoint $ITEM_NAME (expired: $DELETE_DATE)" "success"
+			else
+			    log_action "$TIMESTAMP" "delete-private-endpoint" "❌ Failed to delete private endpoint $ITEM_NAME" "fail"
+			fi
+        	fi
+	done
+}
+
 # === Session Check ===
 if oci iam user get --user-id "$USER_ID" &> /dev/null; then
   log_action "$TIMESTAMP" "session" "✅ Get user info" "success"
@@ -1054,7 +1146,7 @@ else
 fi
 
 # === Randomly select number of jobs to run ===
-TOTAL_JOBS=19
+TOTAL_JOBS=21
 JOB_COUNT=$((RANDOM % TOTAL_JOBS + 1))
 
 ALL_JOBS=(
@@ -1077,6 +1169,8 @@ ALL_JOBS=(
   job17_create_autonomous_db
   job18_delete_autonomous_db
   job19_toggle_autonomous_db
+  job20_create_random_private_endpoint
+  job21_delete_private_endpoint
 )
 
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))

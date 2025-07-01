@@ -431,10 +431,6 @@ job5_list_resources() {
 }
 
 job6_create_vcn() {
-      ensure_namespace_auto
-      ensure_tag "auto-delete" "Mark for auto deletion"
-      ensure_tag "auto-delete-date" "Scheduled auto delete date"
-
       local VCN_AVAILABLE=$(oci limits resource-availability get \
     	--service-name vcn \
     	--limit-name vcn-count \
@@ -446,6 +442,10 @@ job6_create_vcn() {
       	log_action "$TIMESTAMP" "vcn-create" "❌ VCN quota reached: $AVAILABLE available" "skipped"
     	return;
       fi
+      
+      ensure_namespace_auto
+      ensure_tag "auto-delete" "Mark for auto deletion"
+      ensure_tag "auto-delete-date" "Scheduled auto delete date"
 
       VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"

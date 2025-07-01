@@ -260,7 +260,7 @@ for val in $allthreads; do
     container_name=$val
     container_uptime=$(docker ps -f name="^${container_name}$" --format "{{.Status}}" | sed 's/Up //')
     if [ $(docker logs $container_name --tail 500 2>&1 | grep -i "Error! System clock seems incorrect" | wc -l) -eq 1 ]; then 
-        sudo rm -rf /opt/uam_data/$container_name
+        #sudo rm -rf /opt/uam_data/$container_name
         sudo docker restart $container_name
         echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Error! System clock seems incorrect${NC}"
         #sudo docker rm -f $container_name
@@ -279,7 +279,7 @@ for val in $threads; do
     lastblock=$(docker logs $container_name --tail 500 2>&1 | grep -v "sendto: Invalid argument" | awk '/Processed block/ {block=$NF} END {print block}')
     echo "Last block of $container_name: $lastblock"
     if [ -z "$lastblock" ]; then 
-        sudo rm -rf /opt/uam_data/$container_name
+        #sudo rm -rf /opt/uam_data/$container_name
         sudo docker restart $container_name
         echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Not activated after 40 hours${NC}"
         #sudo docker rm -f $container_name
@@ -288,7 +288,7 @@ for val in $threads; do
         restarted_threads+=("$container_name - Uptime: $container_uptime - Not activated after 40 hours")
         ((numberRestarted+=1))
     elif [ "$lastblock" -le "$block" ]; then 
-        sudo rm -rf /opt/uam_data/$container_name
+        #sudo rm -rf /opt/uam_data/$container_name
         sudo docker restart $container_name
         echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Missed: $(($currentblock - $lastblock)) blocks${NC}"
         #sudo docker rm -f $container_name

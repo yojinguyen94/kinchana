@@ -436,7 +436,7 @@ job6_create_vcn() {
     	--raw-output)
 
       if [[ -z "$VCN_AVAILABLE" || "$VCN_AVAILABLE" -le 0 ]]; then
-      	log_action "$TIMESTAMP" "vcn-create" "❌ VCN quota reached: $AVAILABLE available" "skipped"
+      	log_action "$TIMESTAMP" "vcn-create" "❌ VCN quota reached: $VCN_AVAILABLE available" "skipped"
     	return;
       fi
       
@@ -981,7 +981,7 @@ job18_delete_autonomous_db() {
 }
 
 job19_toggle_autonomous_db() {
-	  local JOB_NAME="toggle_autonomous_db"
+	  local JOB_NAME="toggle-autonomous-db"
 	
 	  local DBS=$(oci db autonomous-database list \
 	    --compartment-id "$TENANCY_OCID" \
@@ -1044,7 +1044,7 @@ job19_toggle_autonomous_db() {
 }
 
 job20_create_random_private_endpoint() {
-  local JOB_NAME="create_private_endpoint"
+  local JOB_NAME="create-private-endpoint"
 
   local MAX_PE_LIMIT=10
 	
@@ -1136,6 +1136,125 @@ job21_delete_private_endpoint() {
 	done
 }
 
+job22_create_random_nosql_table() {
+  local JOB_NAME="create-nosql-table"
+
+  local AVAILABLE_GB=$(oci limits resource-availability get \
+    --service-name nosql \
+    --limit-name table-size-gb \
+    --compartment-id "$TENANCY_OCID" \
+    --query "data.available" \
+    --raw-output 2>/dev/null)
+
+  if [[ -z "$AVAILABLE_GB" || "$AVAILABLE_GB" -le 0 ]]; then
+	log_action "$TIMESTAMP" "$JOB_NAME" "❌ NoSQL storage quota reached: $AVAILABLE_GB available" "skipped"
+	return;
+  fi
+
+  ensure_namespace_auto
+  ensure_tag "auto-delete" "Mark for auto deletion"
+  ensure_tag "auto-delete-date" "Scheduled auto delete date"
+  
+  local READ_UNITS=$((RANDOM % 90 + 10))   # 10–99
+  local WRITE_UNITS=$((RANDOM % 90 + 10))  # 10–99
+  local STORAGE_GB=1
+
+  local -a TABLE_NAMES=(
+  	"user_profile" "user_activity" "session_tokens" "login_attempts" "audit_logs"
+  	"sensor_data" "device_status" "iot_metrics" "location_updates" "alerts"
+  	"orders" "order_items" "inventory" "product_catalog" "pricing"
+  	"payment_logs" "invoices" "billing_events" "refund_requests" "cart_items"
+  	"notifications" "messages" "email_queue" "sms_queue" "push_events"
+  	"click_stream" "web_events" "page_views" "ab_tests" "feature_flags"
+  	"support_tickets" "error_logs" "service_health" "deployment_events" "api_usage"
+  )
+
+  local -a DDL_LIST=(
+	  "CREATE TABLE IF NOT EXISTS %s (user_id STRING, name STRING, email STRING, created_at LONG, PRIMARY KEY(user_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (user_id STRING, action STRING, ts LONG, PRIMARY KEY(user_id, ts))"
+	  "CREATE TABLE IF NOT EXISTS %s (session_id STRING, user_id STRING, token STRING, expiry_ts LONG, PRIMARY KEY(session_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (username STRING, ip STRING, success BOOLEAN, ts LONG, PRIMARY KEY(username, ts))"
+	  "CREATE TABLE IF NOT EXISTS %s (log_id STRING, level STRING, message STRING, ts LONG, PRIMARY KEY(log_id))"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (device_id STRING, temp FLOAT, humidity FLOAT, ts LONG, PRIMARY KEY(device_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (device_id STRING, status STRING, last_seen LONG, battery INT, PRIMARY KEY(device_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (device_id STRING, metric STRING, value FLOAT, ts LONG, PRIMARY KEY(device_id, metric))"
+	  "CREATE TABLE IF NOT EXISTS %s (user_id STRING, lat DOUBLE, lon DOUBLE, ts LONG, PRIMARY KEY(user_id, ts))"
+	  "CREATE TABLE IF NOT EXISTS %s (alert_id STRING, type STRING, severity STRING, ts LONG, PRIMARY KEY(alert_id))"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (order_id STRING, user_id STRING, status STRING, total DOUBLE, created_at LONG, PRIMARY KEY(order_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (item_id STRING, order_id STRING, product_id STRING, quantity INT, PRIMARY KEY(item_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (sku STRING, stock INT, updated_at LONG, PRIMARY KEY(sku))"
+	  "CREATE TABLE IF NOT EXISTS %s (product_id STRING, name STRING, category STRING, price DOUBLE, PRIMARY KEY(product_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (sku STRING, base_price DOUBLE, discount DOUBLE, effective_date LONG, PRIMARY KEY(sku))"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (payment_id STRING, user_id STRING, amount DOUBLE, status STRING, ts LONG, PRIMARY KEY(payment_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (invoice_id STRING, user_id STRING, total DOUBLE, due_date LONG, PRIMARY KEY(invoice_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (event_id STRING, event_type STRING, billing_group STRING, ts LONG, PRIMARY KEY(event_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (refund_id STRING, order_id STRING, reason STRING, status STRING, PRIMARY KEY(refund_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (cart_id STRING, user_id STRING, product_id STRING, qty INT, PRIMARY KEY(cart_id, product_id))"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (notif_id STRING, user_id STRING, type STRING, sent_at LONG, PRIMARY KEY(notif_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (msg_id STRING, sender STRING, recipient STRING, body STRING, ts LONG, PRIMARY KEY(msg_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (email_id STRING, recipient STRING, subject STRING, queued_at LONG, PRIMARY KEY(email_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (sms_id STRING, phone STRING, content STRING, sent_at LONG, PRIMARY KEY(sms_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (push_id STRING, user_id STRING, platform STRING, ts LONG, PRIMARY KEY(push_id))"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (click_id STRING, user_id STRING, element STRING, ts LONG, PRIMARY KEY(click_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (event_id STRING, event_name STRING, metadata JSON, ts LONG, PRIMARY KEY(event_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (view_id STRING, user_id STRING, page STRING, duration INT, ts LONG, PRIMARY KEY(view_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (test_id STRING, group STRING, variant STRING, PRIMARY KEY(test_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (flag STRING, enabled BOOLEAN, updated_at LONG, PRIMARY KEY(flag))"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (ticket_id STRING, user_id STRING, status STRING, priority STRING, created_at LONG, PRIMARY KEY(ticket_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (error_id STRING, code STRING, msg STRING, ts LONG, PRIMARY KEY(error_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (service_id STRING, status STRING, updated_at LONG, PRIMARY KEY(service_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (deploy_id STRING, service STRING, version STRING, ts LONG, PRIMARY KEY(deploy_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (api_id STRING, user_id STRING, endpoint STRING, latency FLOAT, ts LONG, PRIMARY KEY(api_id))"
+  )
+
+  local IDX=$((RANDOM % ${#TABLE_NAMES[@]}))
+  local BASE_NAME="${TABLE_NAMES[$IDX]}"
+  local RANDOM_SUFFIX=$(tr -dc 'a-z0-9' </dev/urandom | head -c 5)
+  local TABLE_NAME="${BASE_NAME}_${RANDOM_SUFFIX}"
+
+  local DDL_TEMPLATE="${DDL_LIST[$IDX]}"
+  local DDL=$(printf "$DDL_TEMPLATE" "$TABLE_NAME")
+  local DELETE_DATE=$(date +%Y-%m-%d --date="+$(( RANDOM % 26 + 5 )) days") #5 - 30d
+  if oci nosql table create \
+    --compartment-id "$TENANCY_OCID" \
+    --name "$TABLE_NAME" \
+    --ddl-statement "$DDL" \
+    --table-limits "{\"maxReadUnits\": $READ_UNITS, \"maxWriteUnits\": $WRITE_UNITS, \"maxStorageInGBs\": $STORAGE_GB}" \
+    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+    --wait-for-state SUCCEEDED; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created NoSQL table $TABLE_NAME" "success"
+  else
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create NoSQL table $TABLE_NAME: $OUTPUT" "fail"
+  fi
+}
+
+job23_delete_nosql_table() {
+	local JOB_NAME="delete-nosql-table"
+	log_action "$TIMESTAMP" "$JOB_NAME" "🔍 Scanning for expired nosql table" "start"
+	local TODAY=$(date +%Y-%m-%d)
+	local ITEMS=$(oci nosql table list --compartment-id "$TENANCY_OCID" --query "data.items[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='DELETED'].name" --raw-output)
+	for ITEM_NAME in $(parse_json_array_string "$ITEMS"); do
+		local DELETE_DATE=$(oci nosql table get --table-name-or-id "$ITEM_NAME" \
+          	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
+	   	--compartment-id "$TENANCY_OCID" \
+          	--raw-output 2>/dev/null)
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$TODAY" +%s) ]]; then
+          		sleep_random 1 10
+	    		if oci nosql table delete --table-name-or-id "$ITEM_NAME" --compartment-id "$TENANCY_OCID" --force; then
+			    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Deleted nosql table $ITEM_NAME (expired: $DELETE_DATE)" "success"
+			else
+			    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to delete nosql table $ITEM_NAME" "fail"
+			fi
+        	fi
+	done
+}
+
 # === Session Check ===
 if oci iam user get --user-id "$USER_ID" &> /dev/null; then
   log_action "$TIMESTAMP" "session" "✅ Get user info" "success"
@@ -1144,7 +1263,7 @@ else
 fi
 
 # === Randomly select number of jobs to run ===
-TOTAL_JOBS=21
+TOTAL_JOBS=22
 JOB_COUNT=$((RANDOM % TOTAL_JOBS + 1))
 
 ALL_JOBS=(
@@ -1169,6 +1288,8 @@ ALL_JOBS=(
   job19_toggle_autonomous_db
   job20_create_random_private_endpoint
   job21_delete_private_endpoint
+  job22_create_random_nosql_table
+  job23_delete_nosql_table
 )
 
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))

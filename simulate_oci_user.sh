@@ -1379,7 +1379,7 @@ fi
 
 # === Randomly select number of jobs to run ===
 TOTAL_JOBS=24
-JOB_COUNT=$((RANDOM % TOTAL_JOBS + 1))
+JOB_COUNT=$((RANDOM % 3 + 1))  # 1–3 job
 
 ALL_JOBS=(
   job1_list_iam

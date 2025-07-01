@@ -649,7 +649,7 @@ job12_update_volume_resource_tag() {
 	
 	VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
 	if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
-	    log_action "$TIMESTAMP" "update-volume-tag" "❌ No volumes found to tag" "skip"
+	    log_action "$TIMESTAMP" "update-volume-tag" "❌ No volumes found to tag" "skipped"
      	else
 	    SELECTED_LINE=$((RANDOM % VOL_COUNT + 1))
 	    SELECTED=$(parse_json_array "$VOLS" | sed -n "${SELECTED_LINE}p")
@@ -708,7 +708,7 @@ job13_update_bucket_resource_tag() {
 	
 	BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
 	if [[ -z "$BUCKETS" || "$BUCKET_COUNT" -eq 0 ]]; then
-	   log_action "$TIMESTAMP" "update-bucket-tag" "❌ No buckets found to tag" "skip"
+	   log_action "$TIMESTAMP" "update-bucket-tag" "❌ No buckets found to tag" "skipped"
      	else
       	   ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
            readarray -t BUCKET_ARRAY <<< "$ITEMS"
@@ -768,7 +768,7 @@ job14_edit_volume() {
 	local VOL_COUNT=$(echo "$VOLS" | grep -c '"id"')
 	
 	if [[ -z "$VOLS" || "$VOL_COUNT" -eq 0 ]]; then
-	  log_action "$TIMESTAMP" "edit-volume-size" "❌ No volumes with auto-delete=true found to edit size" "skip"
+	  log_action "$TIMESTAMP" "edit-volume-size" "❌ No volumes with auto-delete=true found to edit size" "skipped"
 	else
 	  local AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
 	
@@ -993,7 +993,7 @@ job19_toggle_autonomous_db() {
 
 	  local DB_COUNT=$(echo "$DBS" | grep -c '"id"')
 	  if [[ -z "$DBS" || "$DB_COUNT" -eq 0 ]]; then
-		  log_action "$TIMESTAMP" "$JOB_NAME" "❌ No DB found to toggle" "skip"
+		  log_action "$TIMESTAMP" "$JOB_NAME" "❌ No DB found to toggle" "skipped"
 	  else
 		  local SELECTED_LINE=$((RANDOM % DB_COUNT + 1))
 		  local SELECTED=$(parse_json_array "$DBS" | sed -n "${SELECTED_LINE}p")
@@ -1074,7 +1074,7 @@ job20_create_random_private_endpoint() {
 
   local VCN_COUNT=$(echo "$VCN_LIST" | grep -c '"id"')
   if [[ -z "$VCN_LIST" || "$VCN_COUNT" -eq 0 ]]; then
-    log_action "$TIMESTAMP" "$JOB_NAME" "❌ No VCNs found in compartment" "skip"
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ No VCNs found in compartment" "skipped"
     return;
   fi
 
@@ -1086,7 +1086,7 @@ job20_create_random_private_endpoint() {
 
   local SUBNET_COUNT=$(echo "$SUBNET_LIST" | grep -c '"id"')
   if [[ -z "$SUBNET_LIST" || "$SUBNET_COUNT" -eq 0 ]]; then
-    log_action "$TIMESTAMP" "$JOB_NAME" "❌ No subnets found in VCN $VCN_NAME" "skip"
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ No subnets found in VCN $VCN_NAME" "skipped"
     return;
   fi
 

@@ -218,6 +218,60 @@ random_password() {
   echo "$(echo "$RAW" | fold -w1 | shuf | tr -d '\n')"
 }
 
+generate_realistic_value() {
+  local col_name="$1"
+  local col_type="$2"
+
+  # Normalize col_type to uppercase (in case it's lowercase)
+  col_type=$(echo "$col_type" | tr '[:lower:]' '[:upper:]')
+
+  # Try override based on col_name (regardless of type)
+  case "$col_name" in
+    email) echo "\"user$(shuf -i 1000-9999 -n1)@gmail.com\"" && return ;;
+    ip) echo "\"192.168.$((RANDOM % 255)).$((RANDOM % 255))\"" && return ;;
+    name|username) echo "\"$(tr -dc a-z0-9 </dev/urandom | head -c 6)\"" && return ;;
+    status) echo "\"$(shuf -e ACTIVE INACTIVE PENDING DELETED -n1)\"" && return ;;
+    city) echo "\"$(shuf -e Hanoi Saigon Tokyo Paris NewYork -n1)\"" && return ;;
+    country) echo "\"$(shuf -e US VN JP FR DE -n1)\"" && return ;;
+    created_at|updated_at|timestamp|time)
+      echo $(date +%s000) && return ;;
+    age) echo $((RANDOM % 70 + 18)) && return ;;
+    price|amount|total) echo "$(shuf -i 10-500 -n1).$(shuf -i 0-99 -n1 | xargs printf "%02d")" && return ;;
+  esac
+
+  # If col_name is not special → fallback by col_type
+  case "$col_type" in
+    STRING)
+      echo "\"$(tr -dc a-z0-9 </dev/urandom | head -c 10)\""
+      ;;
+    INT|INTEGER)
+      echo $((RANDOM % 1000))
+      ;;
+    FLOAT|DOUBLE|NUMBER)
+      echo "$(shuf -i 5-200 -n1).$(shuf -i 0-99 -n1 | xargs printf "%02d")"
+      ;;
+    LONG)
+      echo $(date +%s000)
+      ;;
+    BOOLEAN)
+      echo $([[ $((RANDOM % 2)) -eq 0 ]] && echo "true" || echo "false")
+      ;;
+    JSON)
+      echo "{\"lat\": $(awk 'BEGIN{print 10 + rand()}'), \"lon\": $(awk 'BEGIN{print 106 + rand()}')}"
+      ;;
+    *)
+      # Unknown type → randomly choose a format
+      case $((RANDOM % 5)) in
+        0) echo "\"$(tr -dc a-z </dev/urandom | head -c 5)\"" ;;
+        1) echo $((RANDOM % 500)) ;;
+        2) echo "$(awk 'BEGIN{ printf("%.1f", rand()*50) }')" ;;
+        3) echo $(date +%s000) ;;
+        4) echo "true" ;;
+      esac
+      ;;
+  esac
+}
+
 
 job1_list_iam() {
       log_action "$TIMESTAMP" "info" "List IAM info" "start"
@@ -1255,6 +1309,67 @@ job23_delete_nosql_table() {
 	done
 }
 
+job24_upload_random_row_to_nosql_table() {
+  local JOB_NAME="upload_random_row_to_nosql_table"
+  log_action "$TIMESTAMP" "$JOB_NAME" "🔍 Scanning for nosql table" "start"
+  local TABLES=$(oci nosql table list --compartment-id "$TENANCY_OCID" --query "data.items[?\"defined-tags\".auto.\"auto-delete\"=='true' && \"lifecycle-state\"!='DELETED'].name" --raw-output)
+  local TABLE_COUNT=$(echo "$TABLES" | grep -c '"')
+  
+  if [[ -z "$TABLES" || "$TABLE_COUNT" -eq 0 ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ No nosql table" "skipped"
+    return;
+  fi
+  
+  local ITEMS=$(echo "$TABLES" | grep -o '".*"' | tr -d '"')
+  readarray -t TABLE_ARRAY <<< "$ITEMS"
+  local RANDOM_INDEX=$(( RANDOM % ${#TABLE_ARRAY[@]} ))
+  local TABLE_NAME="${TABLE_ARRAY[$RANDOM_INDEX]}"
+  
+  local COLUMNS=$(oci nosql table get \
+    --table-name-or-id "$TABLE_NAME" \
+    --compartment-id "$TENANCY_OCID" \
+    --query "data.schema.columns[*].{id:name, name:type}" \
+    --raw-output)
+
+  local COLUM_COUNT=$(echo "$COLUMNS" | grep -c '"id"')
+  if [[ -z "$COLUMNS" || "$COLUM_COUNT" -eq 0 ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to get schema of $TABLE_NAME" "fail"
+    return;
+  fi
+  
+  local ROW_COUNT=$((RANDOM % 5 + 1))
+  local PARSED_COLUMNS=$(parse_json_array "$COLUMNS")
+  
+  log_action "$TIMESTAMP" "$JOB_NAME" "⬆️ Starting to upload $ROW_COUNT row(s) into table '$TABLE_NAME'" "info"
+  
+  for ((i = 1; i <= ROW_COUNT; i++)); do
+    local VALUE_JSON="{"
+    local FIRST=true
+    local PRIMARY_KEY=""
+
+    while IFS='|' read -r COL_NAME COL_TYPE; do
+      local RAND_VAL=$(generate_realistic_value "$COL_NAME" "$COL_TYPE")
+
+      [[ "$FIRST" = false ]] && VALUE_JSON+=", "
+      VALUE_JSON+="\"$COL_NAME\": $RAND_VAL"
+      [[ -z "$PRIMARY_KEY" ]] && PRIMARY_KEY="$RAND_VAL"
+      FIRST=false
+    done <<< "$PARSED_COLUMNS"
+    
+    VALUE_JSON+="}"
+    if oci nosql row update \
+	    --table-name-or-id "$TABLE_NAME" \
+	    --compartment-id "$TENANCY_OCID" \
+	    --value "$VALUE_JSON" --force; then
+	    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Uploaded row: $VALUE_JSON" "success"
+    else
+	    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed insert into $TABLE_NAME: $OUTPUT" "fail"
+    fi
+    sleep_random 5 30
+  done
+}
+
+
 # === Session Check ===
 if oci iam user get --user-id "$USER_ID" &> /dev/null; then
   log_action "$TIMESTAMP" "session" "✅ Get user info" "success"
@@ -1263,7 +1378,7 @@ else
 fi
 
 # === Randomly select number of jobs to run ===
-TOTAL_JOBS=22
+TOTAL_JOBS=24
 JOB_COUNT=$((RANDOM % TOTAL_JOBS + 1))
 
 ALL_JOBS=(
@@ -1290,6 +1405,7 @@ ALL_JOBS=(
   job21_delete_private_endpoint
   job22_create_random_nosql_table
   job23_delete_nosql_table
+  job24_upload_random_row_to_nosql_table
 )
 
 SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))

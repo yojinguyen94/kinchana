@@ -137,7 +137,7 @@ if [ "$LAST_RUN_DATE" != "$DATE" ]; then
   RUN_COUNT=0
 fi
 
-if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 5 && "$RANDOM_CHANCE" -eq 0 ]]; then
+if [[ "$HOUR" -ge 9 && "$HOUR" -le 18 && "$RUN_COUNT" -lt 4 && "$RANDOM_CHANCE" -eq 0 ]]; then
   if [ -f "$STATE_FILE" ]; then
     LAST_RUN_TS=$(stat -c %Y "$STATE_FILE")
     NOW_TS=$(date +%s)

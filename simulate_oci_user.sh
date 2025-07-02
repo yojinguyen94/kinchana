@@ -554,7 +554,7 @@ job7_create_volume() {
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
-      local VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      local VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume data log backup db temp cache analytics archive test prod dev staging media files secure audit sys user project export import storage fast)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       local DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-15d
 
       log_action "$TIMESTAMP" "volume-create" "🎯 Creating volume $VOL_NAME with auto-delete" "start"

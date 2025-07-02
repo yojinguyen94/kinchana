@@ -385,6 +385,40 @@ if [[ "$setNewThreadUAM" -gt 0 ]] || ([[ "$cpu_cores" -le 8 ]] && [[ ${#restarte
     install_uam "$totalThreads" "$PBKEY"
 fi
 
+maxsize_restarted_threads=()
+maxsize_number_restarted=0
+echo "🔍 Scanning uam for size greater than 500MB..."
+sudo docker ps -a --size --filter ancestor=$imageName --format '{{.ID}} {{.Names}} {{.Size}}' | while read -r id name size_raw; do
+    size=$(echo "$size_raw" | awk '{print $1}')
+
+    if [[ "$size" =~ ^([0-9.]+)([kMG]B)$ ]]; then
+        num=${BASH_REMATCH[1]}
+        unit=${BASH_REMATCH[2]}
+        case "$unit" in
+            kB) size_mb=$(echo "$num / 1024" | bc -l) ;;
+            MB) size_mb=$num ;;
+            GB) size_mb=$(echo "$num * 1024" | bc -l) ;;
+        esac
+        cmp=$(echo "$size_mb > 500" | bc -l)
+        if [[ "$cmp" == "1" ]]; then
+            #echo "🔁 Restarting container $name ($id) - Size: $size"
+            #sudo docker restart "$id"
+            maxsize_restarted_threads+=("$name size is $size (> 500MB)")
+            ((maxsize_number_restarted+=1))
+        fi
+    fi
+done
+
+if [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
+    maxsize_thread_list=""
+    for thread in "${maxsize_restarted_threads[@]}"; do
+        maxsize_thread_list+="📦 $thread%0A"
+    done
+    
+    send_telegram_notification "$nowDate%0A%0A ⚠️ UAM SIZE ALERT!!!%0A%0AIP: $PUBLIC_IP%0AISP: $ISP%0AOrg: $ORG%0ACountry: $COUNTRY%0ARegion: $REGION%0ACity: $CITY%0A%0A✅ System Information:%0A----------------------------%0AOS: $os_name%0ATotal CPU Cores: $cpu_cores%0ACPU Name: $cpu_name%0ACPU Load: $cpu_load%%0ATotal RAM: $total_ram MB%0ARAM Usage: $ram_usage%%0AAvailable RAM: $available_ram MB%0ADisk Usage (Root): $disk_usage%0AUptime: $uptime%0A%0A✅ UAM Information:%0A----------------------------%0ACurrent Block: $currentblock%0APBKey: $PBKEY%0ATotal Threads: $totalThreads%0A$maxsize_thread_list"
+fi
+
+
 if [ ${#restarted_threads[@]} -gt 0 ]; then
     thread_list=""
     for thread in "${restarted_threads[@]}"; do

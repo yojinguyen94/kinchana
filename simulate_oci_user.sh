@@ -120,6 +120,7 @@ ensure_namespace_auto() {
       --description "Auto delete tag" \
       --region "$HOME_REGION" \
       --query "data.id" --raw-output)
+    sleep_random 3 5
     log_action "$TIMESTAMP" "tag-namespace" "Created tag namespace auto" "success"
   fi
 }
@@ -137,6 +138,7 @@ ensure_tag() {
       --description "$DESC" \
       --region "$HOME_REGION" \
       --is-cost-tracking false > /dev/null
+    sleep_random 3 5
     log_action "$TIMESTAMP" "tag" "Created tag $TAG_NAME" "success"
   fi
 }

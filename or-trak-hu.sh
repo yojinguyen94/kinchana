@@ -406,7 +406,7 @@ while read -r id name size_raw; do
 
         cmp=$(echo "$size_mb > $maxsize_limit" | bc -l)
         if [[ "$cmp" == "1" ]]; then
-            maxsize_restarted_threads+=("$name size is $size (> ${maxsize_limit}MB)")
+            maxsize_restarted_threads+=("$name size is $size")
             ((maxsize_number_restarted+=1))
             #sudo docker restart "$id"
         fi
@@ -414,7 +414,7 @@ while read -r id name size_raw; do
 done < <(sudo docker ps -a --size --filter ancestor="$imageName" --format '{{.ID}} {{.Names}} {{.Size}}')
 
 if [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
-    maxsize_thread_list=""
+    maxsize_thread_list="$maxsize_number_restarted uam(s) due to size > ${maxsize_limit}MB:%0A"
     for thread in "${maxsize_restarted_threads[@]}"; do
         maxsize_thread_list+="📦 $thread%0A"
     done

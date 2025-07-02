@@ -260,15 +260,16 @@ for val in $allthreads; do
     container_name=$val
     container_uptime=$(docker ps -f name="^${container_name}$" --format "{{.Status}}" | sed 's/Up //')
     if [ $(docker logs $container_name --tail 500 2>&1 | grep -i "Error! System clock seems incorrect" | wc -l) -eq 1 ]; then 
+        tele_message="$container_name - Uptime: $container_uptime - Error! System clock seems incorrect"
         if [[ $cpu_cores -le 8 ]]; then
           sudo docker rm -f $container_name
           sudo rm -rf /opt/uam_data/$container_name
-          echo -e "${RED}Remove: $container_name - Uptime: $container_uptime - Error! System clock seems incorrect${NC}"
+          echo -e "${RED}Remove: $tele_message${NC}"
         else
           sudo docker restart $container_name
-          echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Error! System clock seems incorrect${NC}"
+          echo -e "${RED}Restart: $tele_message${NC}"
         fi
-        restarted_threads+=("$container_name - Uptime: $container_uptime - Error! System clock seems incorrect")
+        restarted_threads+=("$tele_message")
         ((numberRestarted+=1))
     fi
 done
@@ -281,26 +282,28 @@ for val in $threads; do
     lastblock=$(docker logs $container_name --tail 500 2>&1 | grep -v "sendto: Invalid argument" | awk '/Processed block/ {block=$NF} END {print block}')
     echo "Last block of $container_name: $lastblock"
     if [ -z "$lastblock" ]; then 
+        tele_message="$container_name - Uptime: $container_uptime - Not activated after 40 hours"
         if [[ $cpu_cores -le 8 ]]; then
           sudo docker rm -f $container_name
           sudo rm -rf /opt/uam_data/$container_name
-          echo -e "${RED}Remove: $container_name - Uptime: $container_uptime - Not activated after 40 hours${NC}"
+          echo -e "${RED}Remove: $tele_message${NC}"
         else
           sudo docker restart $container_name
-          echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Not activated after 40 hours${NC}"
+          echo -e "${RED}Restart: $tele_message${NC}"
         fi
-        restarted_threads+=("$container_name - Uptime: $container_uptime - Not activated after 40 hours")
+        restarted_threads+=("$tele_message")
         ((numberRestarted+=1))
     elif [ "$lastblock" -le "$block" ]; then 
+        tele_message="$container_name - Uptime: $container_uptime - Missed: $(($currentblock - $lastblock)) blocks"
         if [[ $cpu_cores -le 8 ]]; then
           sudo docker rm -f $container_name
           sudo rm -rf /opt/uam_data/$container_name
-          echo -e "${RED}Remove: $container_name - Uptime: $container_uptime - Missed: $(($currentblock - $lastblock)) blocks${NC}"
+          echo -e "${RED}Remove: $tele_message${NC}"
         else
           sudo docker restart $container_name
-          echo -e "${RED}Restart: $container_name - Uptime: $container_uptime - Missed: $(($currentblock - $lastblock)) blocks${NC}"
+          echo -e "${RED}Restart: $tele_message${NC}"
         fi
-        restarted_threads+=("$container_name - Uptime: $container_uptime - Last Block: $lastblock - Missed: $(($currentblock - $lastblock)) blocks")
+        restarted_threads+=("$tele_message")
         ((numberRestarted+=1))
     else 
         echo -e "${GREEN}Passed${NC}"

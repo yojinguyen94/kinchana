@@ -294,7 +294,7 @@ for val in $threads; do
         restarted_threads+=("$tele_message")
         ((numberRestarted+=1))
     elif [ "$lastblock" -le "$block" ]; then 
-        tele_message="$container_name - Uptime: $container_uptime - Missed: $(($currentblock - $lastblock)) blocks"
+        tele_message="$container_name - Uptime: $container_uptime - Last Block: $lastblock - Missed: $(($currentblock - $lastblock)) blocks"
         if [[ $cpu_cores -le 8 ]]; then
           sudo docker rm -f $container_name
           sudo rm -rf /opt/uam_data/$container_name

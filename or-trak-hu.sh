@@ -388,7 +388,7 @@ fi
 maxsize_restarted_threads=()
 maxsize_number_restarted=0
 maxsize_limit=500
-echo "🔍 Scanning uam for size greater than 500MB..."
+echo "🔍 Scanning uam for size greater than ${maxsize_limit}MB..."
 sudo docker ps -a --size --filter ancestor=$imageName --format '{{.ID}} {{.Names}} {{.Size}}' | while read -r id name size_raw; do
     size=$(echo "$size_raw" | awk '{print $1}')
 

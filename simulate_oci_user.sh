@@ -221,54 +221,62 @@ random_password() {
 generate_realistic_value() {
   local col_name="$1"
   local col_type="$2"
-
-  # Normalize col_type to uppercase (in case it's lowercase)
   col_type=$(echo "$col_type" | tr '[:lower:]' '[:upper:]')
 
-  # Try override based on col_name (regardless of type)
+  # Helper: random string
+  rand_string() {
+    tr -dc a-z0-9 </dev/urandom | head -c "$1"
+  }
+
+  # Helper: fake UUID
+  rand_id() {
+    echo "\"$(cat /proc/sys/kernel/random/uuid | cut -d'-' -f1)$(rand_string 4)\""
+  }
+
+  # Override by column name
   case "$col_name" in
-    email) echo "\"user$(shuf -i 1000-9999 -n1)@gmail.com\"" && return ;;
-    ip) echo "\"192.168.$((RANDOM % 255)).$((RANDOM % 255))\"" && return ;;
-    name|username) echo "\"$(tr -dc a-z0-9 </dev/urandom | head -c 6)\"" && return ;;
-    status) echo "\"$(shuf -e ACTIVE INACTIVE PENDING DELETED -n1)\"" && return ;;
-    city) echo "\"$(shuf -e Hanoi Saigon Tokyo Paris NewYork -n1)\"" && return ;;
-    country) echo "\"$(shuf -e US VN JP FR DE -n1)\"" && return ;;
-    created_at|updated_at|timestamp|time)
-      echo $(date +%s000) && return ;;
-    age) echo $((RANDOM % 70 + 18)) && return ;;
-    price|amount|total) echo "$(shuf -i 10-500 -n1).$(shuf -i 0-99 -n1 | xargs printf "%02d")" && return ;;
+    email)
+      local name_part=$(rand_string 6)
+      local domain=$(shuf -e gmail.com yahoo.com hotmail.com protonmail.com -n1)
+      echo "\"$name_part@$domain\"" && return ;;
+    ip)
+      echo "\"$((RANDOM % 223 + 1)).$((RANDOM % 255)).$((RANDOM % 255)).$((RANDOM % 255))\"" && return ;;
+    name|username)
+      echo "\"$(tr -dc 'a-zA-Z' </dev/urandom | fold -w 1 | head -n1 | tr '[:lower:]' '[:upper:]')$(rand_string $((RANDOM % 5 + 3)))\"" && return ;;
+    status|type|level|flag|group|variant|priority|reason|city|country|category)
+      echo "\"$(rand_string $((RANDOM % 5 + 5)))\"" && return ;;
+    subject)
+      echo "\"$(tr -dc 'a-zA-Z ' </dev/urandom | fold -w 1 | head -n10 | tr -d '\n')\"" && return ;;
+    *_id|id|user_id|session_id|order_id|invoice_id|cart_id|msg_id|event_id|notif_id|sku|product_id|item_id|device_id|log_id|deploy_id|refund_id|payment_id|push_id|ticket_id)
+      rand_id && return ;;
+    phone)
+      echo "\"+84$(shuf -i 100000000-999999999 -n1)\"" && return ;;
+    lat|lon)
+      awk 'BEGIN{srand(); print (rand()*180-90)}' && return ;;
+    created_at|updated_at|queued_at|sent_at|ts|timestamp|time)
+      echo $(( $(date +%s%3N) - (RANDOM % 2592000000) )) && return ;;
+    amount|price|total|base_price|discount|latency)
+      awk 'BEGIN{srand(); printf "%.2f", rand()*1000}' && return ;;
   esac
 
-  # If col_name is not special → fallback by col_type
+  # Fallback theo kiểu dữ liệu
   case "$col_type" in
     STRING)
-      echo "\"$(tr -dc a-z0-9 </dev/urandom | head -c 10)\""
-      ;;
+      echo "\"$(rand_string $((RANDOM % 6 + 5)))\"" ;;
     INT|INTEGER)
-      echo $((RANDOM % 1000))
-      ;;
+      echo $((RANDOM % 10000)) ;;
     FLOAT|DOUBLE|NUMBER)
-      echo "$(shuf -i 5-200 -n1).$(shuf -i 0-99 -n1 | xargs printf "%02d")"
-      ;;
+      awk 'BEGIN{srand(); printf "%.2f", rand()*1000}' ;;
     LONG)
-      echo $(date +%s000)
-      ;;
+      echo $(( $(date +%s%3N) - (RANDOM % 2592000000) )) ;;
     BOOLEAN)
-      echo $([[ $((RANDOM % 2)) -eq 0 ]] && echo "true" || echo "false")
-      ;;
+      echo $([[ $((RANDOM % 2)) -eq 0 ]] && echo "true" || echo "false") ;;
     JSON)
-      echo "{\"lat\": $(awk 'BEGIN{print 10 + rand()}'), \"lon\": $(awk 'BEGIN{print 106 + rand()}')}"
-      ;;
+      local lat=$(awk 'BEGIN{srand(); printf "%.6f", 10 + rand()*5}')
+      local lon=$(awk 'BEGIN{srand(); printf "%.6f", 106 + rand()*5}')
+      echo "{\"lat\": $lat, \"lon\": $lon}" ;;
     *)
-      # Unknown type → randomly choose a format
-      case $((RANDOM % 5)) in
-        0) echo "\"$(tr -dc a-z </dev/urandom | head -c 5)\"" ;;
-        1) echo $((RANDOM % 500)) ;;
-        2) echo "$(awk 'BEGIN{ printf("%.1f", rand()*50) }')" ;;
-        3) echo $(date +%s000) ;;
-        4) echo "true" ;;
-      esac
-      ;;
+      echo "\"$(rand_string 6)\"" ;;
   esac
 }
 

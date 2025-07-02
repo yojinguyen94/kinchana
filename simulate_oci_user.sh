@@ -1117,7 +1117,7 @@ job20_create_random_private_endpoint() {
     log_action "$TIMESTAMP" "$JOB_NAME" "🤏 Waiting for more time" "delayed"
     return
   fi
-  
+  log_action "$TIMESTAMP" "$JOB_NAME" "✅ Sufficient Private Endpoint quota ($CURRENT_PE_COUNT / $MAX_PE_LIMIT) → creating Private Endpoint..." "info"
   ensure_namespace_auto
   ensure_tag "auto-delete" "Mark for auto deletion"
   ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -1201,10 +1201,10 @@ job22_create_random_nosql_table() {
     --raw-output 2>/dev/null)
 
   if [[ -z "$AVAILABLE_GB" || "$AVAILABLE_GB" -le 0 ]]; then
-	log_action "$TIMESTAMP" "$JOB_NAME" "❌ NoSQL storage quota reached: $AVAILABLE_GB available" "skipped"
+	log_action "$TIMESTAMP" "$JOB_NAME" "❌ NoSQL table storage quota reached: $AVAILABLE_GB available" "skipped"
 	return;
   fi
-
+  log_action "$TIMESTAMP" "$JOB_NAME" "✅ Sufficient NoSQL table size GB quota ($AVAILABLE_GB) → creating NoSQL table..." "info"
   ensure_namespace_auto
   ensure_tag "auto-delete" "Mark for auto deletion"
   ensure_tag "auto-delete-date" "Scheduled auto delete date"
@@ -1284,7 +1284,7 @@ job22_create_random_nosql_table() {
     --wait-for-state SUCCEEDED; then
     log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created NoSQL table $TABLE_NAME" "success"
   else
-    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create NoSQL table $TABLE_NAME: $OUTPUT" "fail"
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create NoSQL table $TABLE_NAME" "fail"
   fi
 }
 

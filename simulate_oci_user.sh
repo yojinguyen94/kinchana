@@ -666,7 +666,7 @@ job11_deploy_bucket() {
      	ensure_namespace_auto
         ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
- 	DEPLOY_BUCKET="$(shuf -n 1 -e deploy-artifacts deployment-store deploy-backup pipeline-output release-bucket)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+ 	DEPLOY_BUCKET="$(shuf -n 1 -e deploy-artifacts deployment-store deploy-backup pipeline-output release-bucket release-artifacts staging-artifacts prod-deployments ci-output dev-pipeline test-release build-cache image-artifacts lambda-packages terraform-output cloud-functions deploy-packages versioned-deployments rollout-bucket rollout-stage canary-release bucket-publish)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       	BUCKET_EXISTS=$(oci os bucket get --bucket-name "$DEPLOY_BUCKET" --query 'data.name' --raw-output 2>/dev/null)
 
 	if [ -z "$BUCKET_EXISTS" ]; then
@@ -945,8 +945,8 @@ job17_create_autonomous_db() {
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
 	local JOB_NAME="create-paid-autonomous-db"
 
-	local PREFIXES=("sales" "ml" "analytics" "prod" "test" "hr" "finance" "dev" "backup" "log" "data" "staging" "ops")
-	local FUNCTIONS=("db" "data" "store" "system" "core" "service" "report" "etl" "dash")
+	local PREFIXES=(sales marketing support ml ai analytics prod test hr finance dev backup log data staging ops infra core research it eng qa user admin security billing monitoring iot archive batch media internal external system network mobile api content insight reporting global region1 region2 cloud internaltool public edge compliance)
+	local FUNCTIONS=(db data store system core service report etl dash pipeline api processor engine runner worker consumer sync fetcher collector ingester writer generator uploader model exporter deployer sink source controller frontend backend scheduler monitor)
 	local SUFFIXES=("01" "2025" "$((RANDOM % 100))" "$(date +%y)" "$(date +%m%d)")
 	local DB_NAME_PART="${PREFIXES[RANDOM % ${#PREFIXES[@]}]}-${FUNCTIONS[RANDOM % ${#FUNCTIONS[@]}]}-${SUFFIXES[RANDOM % ${#SUFFIXES[@]}]}-$(uuidgen | cut -c1-6)"
 	local DB_NAME=$(echo "$DB_NAME_PART" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
@@ -1146,7 +1146,7 @@ job20_create_random_private_endpoint() {
   local SUBNET_SELECTED=$(parse_json_array "$SUBNET_LIST" | sed -n "${SUBNET_SELECTED_LINE}p")
   IFS='|' read -r SUBNET_ID SUBNET_NAME <<< "$SUBNET_SELECTED"
 
-  local NAME_PREFIXES=(pe-prod pe-dev pe-db pe-app private-endpoint)
+  local NAME_PREFIXES=(pe-prod pe-dev pe-db pe-app pe-api pe-internal pe-staging pe-test pe-secure private-endpoint internal-access service-endpoint vcn-endpoint subnet-access backend-pe frontend-pe analytics-pe reporting-pe data-access endpoint-gateway db-endpoint log-endpoint app-endpoint monitoring-pe secure-channel edge-endpoint mgmt-pe internal-pe vpn-endpoint core-pe proxy-endpoint dashboard-pe vault-access tenant-pe customer-endpoint storage-endpoint private-comm tunnel-pe function-endpoint worker-pe system-pe compliance-endpoint external-access mesh-endpoint)
   local RANDOM_SUFFIX=$(LC_ALL=C tr -dc 'a-z0-9' </dev/urandom | head -c 6)
   local RANDOM_PREFIX=${NAME_PREFIXES[$RANDOM % ${#NAME_PREFIXES[@]}]}
   local PE_NAME="${RANDOM_PREFIX}-${RANDOM_SUFFIX}"

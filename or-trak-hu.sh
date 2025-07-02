@@ -387,6 +387,7 @@ fi
 
 maxsize_restarted_threads=()
 maxsize_number_restarted=0
+maxsize_limit=500
 echo "🔍 Scanning uam for size greater than 500MB..."
 sudo docker ps -a --size --filter ancestor=$imageName --format '{{.ID}} {{.Names}} {{.Size}}' | while read -r id name size_raw; do
     size=$(echo "$size_raw" | awk '{print $1}')
@@ -399,11 +400,11 @@ sudo docker ps -a --size --filter ancestor=$imageName --format '{{.ID}} {{.Names
             MB) size_mb=$num ;;
             GB) size_mb=$(echo "$num * 1024" | bc -l) ;;
         esac
-        cmp=$(echo "$size_mb > 500" | bc -l)
+        cmp=$(echo "$size_mb > $maxsize_limit" | bc -l)
         if [[ "$cmp" == "1" ]]; then
             #echo "🔁 Restarting container $name ($id) - Size: $size"
             #sudo docker restart "$id"
-            maxsize_restarted_threads+=("$name size is $size (> 500MB)")
+            maxsize_restarted_threads+=("$name size is $size (> ${maxsize_limit}MB)")
             ((maxsize_number_restarted+=1))
         fi
     fi

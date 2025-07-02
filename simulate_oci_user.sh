@@ -259,7 +259,6 @@ generate_realistic_value() {
       awk 'BEGIN{srand(); printf "%.2f", rand()*1000}' && return ;;
   esac
 
-  # Fallback theo kiểu dữ liệu
   case "$col_type" in
     STRING)
       echo "\"$(rand_string $((RANDOM % 6 + 5)))\"" ;;

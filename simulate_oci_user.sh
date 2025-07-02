@@ -498,8 +498,8 @@ job6_create_vcn() {
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
 
-      VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn test-vcn core-net secure-vcn infra-net shared-vcn analytics-vcn sandbox-vcn external-net mobile-backend edge-vcn netzone control-plane service-mesh)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet internal-subnet public-subnet private-subnet web-subnet cache-subnet logging-subnet monitor-subnet proxy-subnet gateway-subnet storage-subnet analytics-subnet sandbox-subnet control-subnet user-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-10d
 
       log_action "$TIMESTAMP" "vcn-create" "🎯 Creating VCN $VCN_NAME with auto-delete" "start"

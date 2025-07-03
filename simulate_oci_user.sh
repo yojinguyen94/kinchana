@@ -1397,7 +1397,7 @@ job24_upload_random_row_to_nosql_table() {
 #fi
 
 # === Randomly select number of jobs to run ===
-JOB_COUNT=$((RANDOM % 3 + 1))  # 1–3 job
+JOB_COUNT=$((RANDOM % 2 + 1))  # 1–2 job
 
 ALL_JOBS=(
   job1_list_iam

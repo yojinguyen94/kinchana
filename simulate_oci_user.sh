@@ -1661,6 +1661,33 @@ job24_upload_random_row_to_nosql_table() {
   done
 }
 
+job25_update_bucket_policies() {
+  local JOB_NAME="create_object_storage_policies"
+  local BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
+	    --query "data[].name" --raw-output)
+	
+  local BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
+  if [[ -z "$BUCKETS" || "$BUCKET_COUNT" -eq 0 ]]; then
+	log_action "$TIMESTAMP" "$JOB_NAME" "❌ No buckets found to update access policy" "skipped"
+	return
+  fi
+  local ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
+  readarray -t BUCKET_ARRAY <<< "$ITEMS"
+  local RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
+  local BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
+  sleep_random 10 20
+  log_action "$TIMESTAMP" "$JOB_NAME" "🛡️ Updating public access policy for ${BUCKET_NAME} bucket..." "start"
+
+  local POLICIES=("NoPublicAccess" "ObjectRead" "ObjectReadWithoutList")
+  local CHOSEN_POLICY=$(shuf -n 1 -e "${POLICIES[@]}")
+
+  log_action "$TIMESTAMP" "$JOB_NAME" "🔄 Setting '$CHOSEN_POLICY' for bucket: $BUCKET_NAME" "info"
+  if oci os bucket update --name "$BUCKET_NAME" --public-access-type "$CHOSEN_POLICY"; then
+	log_action "$TIMESTAMP" "$JOB_NAME" "✅ Bucket $BUCKET_NAME updated with public access: $CHOSEN_POLICY" "success"
+  else
+	log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed update $BUCKET_NAME with public access: $CHOSEN_POLICY" "fail"
+  fi
+}
 
 # === Session Check ===
 #if oci iam user get --user-id "$USER_ID" &> /dev/null; then
@@ -1698,6 +1725,7 @@ ALL_JOBS=(
   job22_create_random_nosql_table
   job23_delete_nosql_table
   job24_upload_random_row_to_nosql_table
+  job25_update_bucket_policies
 )
 
 # 🧹 Remove job log entries older than 7 days

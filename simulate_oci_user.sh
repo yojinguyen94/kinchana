@@ -1473,155 +1473,75 @@ job22_create_random_nosql_table() {
   )
 
   local -a DDL_LIST=(
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     user_id STRING,
-	     username STRING,
-	     email STRING,
-	     phone STRING,
-	     address STRING,
-	     city STRING,
-	     country STRING,
-	     zip STRING,
-	     status STRING,
-	     created_at LONG,
-	     updated_at LONG,
-	     PRIMARY KEY(user_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     device_id STRING,
-	     device_type STRING,
-	     firmware_version STRING,
-	     battery_level INTEGER,
-	     location STRING,
-	     last_seen_ts LONG,
-	     is_active BOOLEAN,
-	     tags JSON,
-	     manufacturer STRING,
-	     notes STRING,
-	     installed_at LONG,
-	     PRIMARY KEY(device_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     order_id STRING,
-	     user_id STRING,
-	     order_status STRING,
-	     payment_method STRING,
-	     total_amount DOUBLE,
-	     tax DOUBLE,
-	     discount DOUBLE,
-	     shipping_address STRING,
-	     created_at LONG,
-	     shipped_at LONG,
-	     delivered_at LONG,
-	     PRIMARY KEY(order_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     event_id STRING,
-	     source STRING,
-	     event_type STRING,
-	     metadata JSON,
-	     user_agent STRING,
-	     ip_address STRING,
-	     region STRING,
-	     latency_ms INTEGER,
-	     success BOOLEAN,
-	     timestamp LONG,
-	     error_code STRING,
-	     PRIMARY KEY(event_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     model_id STRING,
-	     version STRING,
-	     parameters JSON,
-	     accuracy FLOAT,
-	     f1_score FLOAT,
-	     precision FLOAT,
-	     recall FLOAT,
-	     dataset STRING,
-	     trained_by STRING,
-	     trained_at LONG,
-	     notes STRING,
-	     PRIMARY KEY(model_id, version)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     invoice_id STRING,
-	     customer_id STRING,
-	     amount DOUBLE,
-	     currency STRING,
-	     issue_date LONG,
-	     due_date LONG,
-	     payment_status STRING,
-	     items JSON,
-	     tax_amount DOUBLE,
-	     discount_amount DOUBLE,
-	     pdf_url STRING,
-	     PRIMARY KEY(invoice_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     api_call_id STRING,
-	     user_id STRING,
-	     method STRING,
-	     path STRING,
-	     request_headers JSON,
-	     request_body JSON,
-	     response_code INTEGER,
-	     response_time_ms INTEGER,
-	     ts LONG,
-	     geo_location STRING,
-	     client_id STRING,
-	     PRIMARY KEY(api_call_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     session_id STRING,
-	     user_id STRING,
-	     start_ts LONG,
-	     end_ts LONG,
-	     ip_address STRING,
-	     device STRING,
-	     browser STRING,
-	     os STRING,
-	     screen_resolution STRING,
-	     location STRING,
-	     session_duration INTEGER,
-	     PRIMARY KEY(session_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     job_id STRING,
-	     job_name STRING,
-	     job_type STRING,
-	     status STRING,
-	     created_by STRING,
-	     scheduled_at LONG,
-	     started_at LONG,
-	     finished_at LONG,
-	     duration INTEGER,
-	     result JSON,
-	     retries INTEGER,
-	     PRIMARY KEY(job_id)
-	  )"
-	
-	  "CREATE TABLE IF NOT EXISTS %s (
-	     alert_id STRING,
-	     type STRING,
-	     severity STRING,
-	     source STRING,
-	     is_acknowledged BOOLEAN,
-	     acknowledged_by STRING,
-	     created_at LONG,
-	     resolved_at LONG,
-	     resolution_notes STRING,
-	     tags JSON,
-	     related_tickets JSON,
-	     PRIMARY KEY(alert_id)
-	  )"
+	"CREATE TABLE IF NOT EXISTS %s (user_id STRING, name STRING, email STRING, age INTEGER, status STRING, created_at LONG, PRIMARY KEY(user_id))"
+	"CREATE TABLE IF NOT EXISTS %s (device_id STRING, model STRING, firmware STRING, last_seen_ts LONG, battery_level INTEGER, PRIMARY KEY(device_id))"
+	"CREATE TABLE IF NOT EXISTS %s (order_id STRING, user_id STRING, total DOUBLE, discount DOUBLE, status STRING, created_at LONG, PRIMARY KEY(order_id))"
+	"CREATE TABLE IF NOT EXISTS %s (product_id STRING, name STRING, price DOUBLE, tags JSON, stock INTEGER, updated_at LONG, PRIMARY KEY(product_id))"
+	"CREATE TABLE IF NOT EXISTS %s (event_id STRING, user_id STRING, event_type STRING, ts LONG, metadata JSON, PRIMARY KEY(event_id))"
+	"CREATE TABLE IF NOT EXISTS %s (file_id STRING, file_name STRING, size INTEGER, mime_type STRING, uploaded_at LONG, PRIMARY KEY(file_id))"
+	"CREATE TABLE IF NOT EXISTS %s (payment_id STRING, order_id STRING, method STRING, amount DOUBLE, paid_at LONG, PRIMARY KEY(payment_id))"
+	"CREATE TABLE IF NOT EXISTS %s (session_id STRING, user_id STRING, start_ts LONG, end_ts LONG, ip_address STRING, PRIMARY KEY(session_id))"
+	"CREATE TABLE IF NOT EXISTS %s (message_id STRING, sender STRING, recipient STRING, content STRING, sent_at LONG, PRIMARY KEY(message_id))"
+	"CREATE TABLE IF NOT EXISTS %s (invoice_id STRING, customer_id STRING, total DOUBLE, due_date LONG, items JSON, PRIMARY KEY(invoice_id))"
+	"CREATE TABLE IF NOT EXISTS %s (log_id STRING, level STRING, message STRING, ts LONG, service STRING, PRIMARY KEY(log_id))"
+	"CREATE TABLE IF NOT EXISTS %s (report_id STRING, generated_by STRING, created_at LONG, parameters JSON, result JSON, PRIMARY KEY(report_id))"
+	"CREATE TABLE IF NOT EXISTS %s (api_id STRING, user_id STRING, endpoint STRING, latency_ms INTEGER, ts LONG, PRIMARY KEY(api_id))"
+	"CREATE TABLE IF NOT EXISTS %s (backup_id STRING, resource_type STRING, created_at LONG, size INTEGER, checksum STRING, PRIMARY KEY(backup_id))"
+	"CREATE TABLE IF NOT EXISTS %s (comment_id STRING, post_id STRING, author STRING, body STRING, created_at LONG, PRIMARY KEY(comment_id))"
+	"CREATE TABLE IF NOT EXISTS %s (role_id STRING, name STRING, permissions JSON, assigned_at LONG, PRIMARY KEY(role_id))"
+	"CREATE TABLE IF NOT EXISTS %s (task_id STRING, title STRING, status STRING, assigned_to STRING, due_date LONG, PRIMARY KEY(task_id))"
+	"CREATE TABLE IF NOT EXISTS %s (upload_id STRING, user_id STRING, filename STRING, bytes_uploaded INTEGER, completed BOOLEAN, PRIMARY KEY(upload_id))"
+	"CREATE TABLE IF NOT EXISTS %s (job_id STRING, name STRING, status STRING, retries INTEGER, started_at LONG, ended_at LONG, PRIMARY KEY(job_id))"
+	"CREATE TABLE IF NOT EXISTS %s (vote_id STRING, poll_id STRING, voter STRING, choice STRING, voted_at LONG, PRIMARY KEY(vote_id))"
+	"CREATE TABLE IF NOT EXISTS %s (alert_id STRING, category STRING, severity STRING, message STRING, triggered_at LONG, PRIMARY KEY(alert_id))"
+	"CREATE TABLE IF NOT EXISTS %s (token_id STRING, user_id STRING, token STRING, expires_at LONG, PRIMARY KEY(token_id))"
+	"CREATE TABLE IF NOT EXISTS %s (mail_id STRING, subject STRING, sender STRING, body STRING, received_at LONG, PRIMARY KEY(mail_id))"
+	"CREATE TABLE IF NOT EXISTS %s (issue_id STRING, reporter STRING, status STRING, priority STRING, created_at LONG, PRIMARY KEY(issue_id))"
+	"CREATE TABLE IF NOT EXISTS %s (snapshot_id STRING, resource_id STRING, ts LONG, metadata JSON, PRIMARY KEY(snapshot_id))"
+	"CREATE TABLE IF NOT EXISTS %s (rate_id STRING, currency STRING, rate FLOAT, date LONG, PRIMARY KEY(rate_id))"
+	"CREATE TABLE IF NOT EXISTS %s (contract_id STRING, client STRING, amount DOUBLE, signed_at LONG, valid_until LONG, PRIMARY KEY(contract_id))"
+	"CREATE TABLE IF NOT EXISTS %s (connection_id STRING, source STRING, destination STRING, created_at LONG, PRIMARY KEY(connection_id))"
+	"CREATE TABLE IF NOT EXISTS %s (license_id STRING, software STRING, key STRING, issued_at LONG, expires_at LONG, PRIMARY KEY(license_id))"
+	"CREATE TABLE IF NOT EXISTS %s (update_id STRING, version STRING, applied BOOLEAN, updated_at LONG, PRIMARY KEY(update_id))"
+	"CREATE TABLE IF NOT EXISTS %s (tag_id STRING, tag STRING, category STRING, usage_count INTEGER, PRIMARY KEY(tag_id))"
+	"CREATE TABLE IF NOT EXISTS %s (weather_id STRING, location STRING, temp FLOAT, humidity FLOAT, timestamp LONG, PRIMARY KEY(weather_id))"
+	"CREATE TABLE IF NOT EXISTS %s (prediction_id STRING, model STRING, result STRING, accuracy FLOAT, created_at LONG, PRIMARY KEY(prediction_id))"
+	"CREATE TABLE IF NOT EXISTS %s (test_id STRING, description STRING, passed BOOLEAN, executed_at LONG, PRIMARY KEY(test_id))"
+	"CREATE TABLE IF NOT EXISTS %s (maintenance_id STRING, machine_id STRING, scheduled_at LONG, technician STRING, PRIMARY KEY(maintenance_id))"
+	"CREATE TABLE IF NOT EXISTS %s (customer_id STRING, name STRING, phone STRING, address STRING, created_at LONG, PRIMARY KEY(customer_id))"
+	"CREATE TABLE IF NOT EXISTS %s (contact_id STRING, user_id STRING, contact_type STRING, value STRING, verified BOOLEAN, PRIMARY KEY(contact_id))"
+	"CREATE TABLE IF NOT EXISTS %s (invite_id STRING, event STRING, invitee STRING, status STRING, sent_at LONG, PRIMARY KEY(invite_id))"
+	"CREATE TABLE IF NOT EXISTS %s (alert_log_id STRING, alert_id STRING, message STRING, acknowledged_by STRING, PRIMARY KEY(alert_log_id))"
+	"CREATE TABLE IF NOT EXISTS %s (log_event_id STRING, source STRING, level STRING, data JSON, ts LONG, PRIMARY KEY(log_event_id))"
+	"CREATE TABLE IF NOT EXISTS %s (run_id STRING, task_id STRING, status STRING, started_at LONG, finished_at LONG, PRIMARY KEY(run_id))"
+	"CREATE TABLE IF NOT EXISTS %s (pod_id STRING, namespace STRING, status STRING, node STRING, start_time LONG, PRIMARY KEY(pod_id))"
+	"CREATE TABLE IF NOT EXISTS %s (build_id STRING, project STRING, branch STRING, result STRING, built_at LONG, PRIMARY KEY(build_id))"
+	"CREATE TABLE IF NOT EXISTS %s (repo_id STRING, name STRING, url STRING, created_at LONG, language STRING, PRIMARY KEY(repo_id))"
+	"CREATE TABLE IF NOT EXISTS %s (license_key STRING, software STRING, max_users INTEGER, activated BOOLEAN, PRIMARY KEY(license_key))"
+	"CREATE TABLE IF NOT EXISTS %s (update_batch_id STRING, items JSON, status STRING, updated_at LONG, PRIMARY KEY(update_batch_id))"
+	"CREATE TABLE IF NOT EXISTS %s (stream_id STRING, type STRING, bitrate INTEGER, started_at LONG, ended_at LONG, PRIMARY KEY(stream_id))"
+	"CREATE TABLE IF NOT EXISTS %s (dns_id STRING, domain STRING, type STRING, ttl INTEGER, value STRING, PRIMARY KEY(dns_id))"
+	"CREATE TABLE IF NOT EXISTS %s (certificate_id STRING, common_name STRING, issued_at LONG, expires_at LONG, PRIMARY KEY(certificate_id))"
+	"CREATE TABLE IF NOT EXISTS %s (patch_id STRING, service STRING, patch_version STRING, released_at LONG, PRIMARY KEY(patch_id))"
+	"CREATE TABLE IF NOT EXISTS %s (group_id STRING, name STRING, members JSON, created_at LONG, PRIMARY KEY(group_id))"
+	"CREATE TABLE IF NOT EXISTS %s (survey_id STRING, title STRING, questions JSON, created_at LONG, PRIMARY KEY(survey_id))"
+	"CREATE TABLE IF NOT EXISTS %s (schedule_id STRING, task_id STRING, interval STRING, next_run LONG, PRIMARY KEY(schedule_id))"
+	"CREATE TABLE IF NOT EXISTS %s (flag_id STRING, name STRING, enabled BOOLEAN, last_updated LONG, PRIMARY KEY(flag_id))"
+	"CREATE TABLE IF NOT EXISTS %s (template_id STRING, type STRING, content STRING, created_at LONG, PRIMARY KEY(template_id))"
+	"CREATE TABLE IF NOT EXISTS %s (error_id STRING, code STRING, description STRING, occurred_at LONG, PRIMARY KEY(error_id))"
+	"CREATE TABLE IF NOT EXISTS %s (metric_id STRING, metric_name STRING, value FLOAT, collected_at LONG, PRIMARY KEY(metric_id))"
+	"CREATE TABLE IF NOT EXISTS %s (incident_id STRING, summary STRING, status STRING, reported_by STRING, reported_at LONG, PRIMARY KEY(incident_id))"
+	"CREATE TABLE IF NOT EXISTS %s (zone_id STRING, name STRING, region STRING, PRIMARY KEY(zone_id))"
+	"CREATE TABLE IF NOT EXISTS %s (region_id STRING, name STRING, endpoint STRING, PRIMARY KEY(region_id))"
+	"CREATE TABLE IF NOT EXISTS %s (host_id STRING, name STRING, ip STRING, os STRING, last_ping LONG, PRIMARY KEY(host_id))"
+	"CREATE TABLE IF NOT EXISTS %s (registry_id STRING, container_name STRING, tag STRING, pushed_at LONG, PRIMARY KEY(registry_id))"
+	"CREATE TABLE IF NOT EXISTS %s (sync_id STRING, source STRING, target STRING, status STRING, synced_at LONG, PRIMARY KEY(sync_id))"
+	"CREATE TABLE IF NOT EXISTS %s (account_id STRING, username STRING, email STRING, verified BOOLEAN, joined_at LONG, PRIMARY KEY(account_id))"
+	"CREATE TABLE IF NOT EXISTS %s (action_id STRING, actor STRING, action_type STRING, object STRING, timestamp LONG, PRIMARY KEY(action_id))"
+	"CREATE TABLE IF NOT EXISTS %s (bill_id STRING, period STRING, amount DOUBLE, paid BOOLEAN, PRIMARY KEY(bill_id))"
+	"CREATE TABLE IF NOT EXISTS %s (ip_log_id STRING, user_id STRING, ip STRING, action STRING, ts LONG, PRIMARY KEY(ip_log_id))"
+	"CREATE TABLE IF NOT EXISTS %s (discount_id STRING, code STRING, amount DOUBLE, valid_until LONG, PRIMARY KEY(discount_id))"
+	"CREATE TABLE IF NOT EXISTS %s (route_id STRING, path STRING, method STRING, handler STRING, PRIMARY KEY(route_id))"
   )
 
   local TABLE_IDX=$((RANDOM % ${#TABLE_NAMES[@]}))

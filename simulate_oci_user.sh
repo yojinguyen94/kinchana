@@ -1617,13 +1617,19 @@ job22_create_random_nosql_table() {
 	  )"
   )
 
-  local IDX=$((RANDOM % ${#TABLE_NAMES[@]}))
-  local BASE_NAME="${TABLE_NAMES[$IDX]}"
+  local TABLE_IDX=$((RANDOM % ${#TABLE_NAMES[@]}))
+  local DDL_IDX=$((RANDOM % ${#DDL_LIST[@]}))
+
+  local BASE_NAME="${TABLE_NAMES[$TABLE_IDX]}"
   local RANDOM_SUFFIX=$(tr -dc 'a-z0-9' </dev/urandom | head -c 5)
   local TABLE_NAME="${BASE_NAME}_${RANDOM_SUFFIX}"
 
-  local DDL_TEMPLATE="${DDL_LIST[$IDX]}"
+  local DDL_TEMPLATE="${DDL_LIST[$DDL_IDX]}"
   local DDL=$(printf "$DDL_TEMPLATE" "$TABLE_NAME")
+  if [[ -z "$DDL" || "$DDL" =~ ^[[:space:]]*$ ]]; then
+  	log_action "$TIMESTAMP" "$JOB_NAME" "❌ Empty DDL statement for table $TABLE_NAME, skipping" "fail"
+  	return
+  fi
   local DELETE_DATE=$(date +%Y-%m-%d --date="+$(( RANDOM % 26 + 5 )) days") #5 - 30d
   sleep_random 10 20
   if oci nosql table create \

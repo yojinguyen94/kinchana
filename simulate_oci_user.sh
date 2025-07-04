@@ -1439,7 +1439,7 @@ clean_old_job_logs() {
   fi
 }
 
-# 📜 Get recently executed jobs within the last 3 days
+# 📜 Get recently executed jobs within the last N days
 get_recent_jobs() {
   local days_back="${1:-3}"
   local logfile=$OCI_BEHAVIOR_FILE

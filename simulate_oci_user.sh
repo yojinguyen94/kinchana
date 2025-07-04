@@ -1793,7 +1793,7 @@ job26_generate_temp_presigned_url() {
   local ACCESS_TYPES=("ObjectRead" "ObjectWrite" "ObjectReadWrite")
   local CHOSEN_ACCESS=$(shuf -n 1 -e "${ACCESS_TYPES[@]}")
 
-  local MINUTES=$((RANDOM % 345 + 15))
+  local MINUTES=$((RANDOM % 345 + 15)) # 15–360 minutes
   local EXPIRES_AT=$(date -u -d "+$MINUTES minutes" '+%Y-%m-%dT%H:%M:%SZ')
 
   local PAR_NAME="par-$(date +%H%M%S)-$(openssl rand -hex 1)"

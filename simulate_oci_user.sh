@@ -1442,7 +1442,7 @@ clean_old_job_logs() {
 # 📜 Get recently executed jobs within the last N days
 get_recent_jobs() {
   local days_back="${1:-3}"
-  local logfile="$HOME/.oci_user_behavior.log"
+  local logfile=$OCI_BEHAVIOR_FILE
 
   if [[ -f "$logfile" ]]; then
     awk -v since="$(date -d "-$days_back days" +%F)" -F"|" '$1 >= since { print $2 }' "$logfile" | sort | uniq

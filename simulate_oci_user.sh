@@ -676,7 +676,7 @@ job7_create_volume() {
       
       log_action "$TIMESTAMP" "volume-create" "📦 Available Block Volume Storage: ${AVAILABLE_STORAGE} GB" "info"
 
-      if [[ "$AVAILABLE_STORAGE" -lt 50 ]]; then
+      if [[ "$AVAILABLE_STORAGE" -lt 1000 ]]; then
 	  log_action "$TIMESTAMP" "volume-create" "⚠️ Skipped: only $AVAILABLE_STORAGE GB left" "skipped"
 	  return
       fi

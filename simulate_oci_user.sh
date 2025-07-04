@@ -525,8 +525,51 @@ job6_create_vcn() {
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
 
-      VCN_NAME="$(shuf -n 1 -e app-vcn dev-network internal-net prod-backbone staging-vcn test-vcn core-net secure-vcn infra-net shared-vcn analytics-vcn sandbox-vcn external-net mobile-backend edge-vcn netzone control-plane service-mesh)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      SUBNET_NAME="$(shuf -n 1 -e frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet internal-subnet public-subnet private-subnet web-subnet cache-subnet logging-subnet monitor-subnet proxy-subnet gateway-subnet storage-subnet analytics-subnet sandbox-subnet control-subnet user-subnet)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      VCN_NAME="$(shuf -n 1 -e \
+	  app-vcn dev-network internal-net prod-backbone staging-vcn test-vcn \
+	  core-net secure-vcn infra-net shared-vcn analytics-vcn sandbox-vcn \
+	  external-net mobile-backend edge-vcn netzone control-plane service-mesh \
+	  production-vcn dev-vcn lab-network demo-backbone \
+	  main-vcn central-network zone-a-vcn zone-b-vcn zone-c-vcn \
+	  oci-core-net cluster-network private-mesh secure-backbone \
+	  backup-network isolated-vcn system-network zero-trust-net \
+	  red-team-vcn blue-team-vcn feature-vcn \
+	  shared-infra-vcn mgmt-vcn platform-vcn service-vcn observability-net \
+	  internal-core-net trusted-network hybrid-vcn local-vcn \
+	  bastion-network appmesh-vcn datacenter-net internet-gateway-vcn \
+	  enterprise-vcn disaster-recovery-vcn high-availability-net \
+	  secure-app-vcn microservices-net financial-vcn \
+	  customer-facing-net partner-integration-vcn \
+	  internal-services-vcn iot-vcn devops-vcn gitlab-vcn \
+	  ml-platform-vcn ai-lab-net bigdata-vcn kafka-vcn \
+	  streaming-vcn logging-vcn api-management-net \
+	  auth-vcn compliance-net audit-vcn \
+	  staging-mesh edge-secure-net performance-net metrics-vcn \
+	  vulnerability-net fraud-detection-net \
+	  dev-x vcn-y net-z net1 net2 net3 project1-vcn project2-vcn \
+	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      SUBNET_NAME="$(shuf -n 1 -e \
+	  frontend-subnet backend-subnet db-subnet app-subnet mgmt-subnet \
+	  internal-subnet public-subnet private-subnet web-subnet cache-subnet \
+	  logging-subnet monitor-subnet proxy-subnet gateway-subnet \
+	  storage-subnet analytics-subnet sandbox-subnet control-subnet \
+	  user-subnet api-subnet bastion-subnet ingress-subnet egress-subnet \
+	  loadbalancer-subnet messaging-subnet search-subnet function-subnet \
+	  admin-subnet readonly-subnet vpn-subnet dev-subnet prod-subnet test-subnet \
+	  isolated-subnet zero-trust-subnet debug-subnet \
+	  mobile-subnet edge-subnet firewall-subnet \
+	  backup-subnet telemetry-subnet collector-subnet router-subnet \
+	  ha-subnet standby-subnet redis-subnet kafka-subnet elastic-subnet \
+	  ai-subnet ml-subnet training-subnet pipeline-subnet batch-subnet \
+	  report-subnet audit-subnet compliance-subnet \
+	  gitlab-subnet cicd-subnet monitoring-subnet \
+	  app1-subnet app2-subnet app3-subnet db1-subnet db2-subnet \
+	  zone-a-subnet zone-b-subnet zone-c-subnet net1-subnet net2-subnet \
+	  partner-subnet external-subnet intranet-subnet isolated-subnet \
+	  vpn-access-subnet admin-zone-subnet legacy-app-subnet \
+	  live-stream-subnet video-transcode-subnet session-cache-subnet \
+	  payment-gateway-subnet risk-analysis-subnet fraud-engine-subnet \
+	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-10d
       sleep_random 10 20
       log_action "$TIMESTAMP" "vcn-create" "🎯 Creating VCN $VCN_NAME with auto-delete" "start"
@@ -581,7 +624,31 @@ job7_create_volume() {
       ensure_namespace_auto
       ensure_tag "auto-delete" "Mark for auto deletion"
       ensure_tag "auto-delete-date" "Scheduled auto delete date"
-      local VOL_NAME="$(shuf -n 1 -e data-volume backup-volume log-volume db-volume test-volume data log backup db temp cache analytics archive test prod dev staging media files secure audit sys user project export import storage fast)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+      local VOL_NAME="$(shuf -n 1 -e \
+	  data-volume backup-volume log-volume db-volume test-volume \
+	  cache-volume tmp-volume export-volume import-volume \
+	  analytics-volume archive-volume report-volume snapshot-volume \
+	  media-volume files-volume secure-volume audit-volume sys-volume \
+	  user-volume app-volume system-volume project-volume build-volume \
+	  runtime-volume docker-volume staging-volume prod-volume dev-volume \
+	  metrics-volume events-volume error-volume access-volume crash-volume \
+	  temp-files config-files scripts-files deploy-files static-assets \
+	  compressed-assets raw-data processed-data temp-storage final-exports \
+	  mysql-volume postgres-volume redis-volume kafka-volume \
+	  mongo-volume elasticsearch-volume minio-volume influx-volume \
+	  prometheus-volume grafana-volume traefik-volume \
+	  zone-a-volume zone-b-volume zone-c-volume us-east-volume us-west-volume \
+	  eu-central-volume ap-southeast-volume global-volume internal-volume \
+	  shared-volume private-volume public-volume customer-volume team-volume \
+	  user-data system-data api-data webhook-data image-cache video-cache \
+	  audio-cache thumbnails backups-old backups-new \
+	  frontend-volume backend-volume api-volume gateway-volume db-log-volume \
+	  batch-job-volume job-result-volume lambda-temp-volume \
+	  staging-tmp dev-tmp prod-tmp prod-final dev-preview user-temp \
+	  data log backup db temp cache analytics archive test prod dev staging media files \
+	  secure audit sys user project export import storage fast tmp snapshot report config \
+	  images content bin etc conf cloud nightly archive2 object-store blob-store \
+	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       local DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-15d
       sleep_random 10 20
       log_action "$TIMESTAMP" "volume-create" "🎯 Creating volume $VOL_NAME with auto-delete" "start"
@@ -693,7 +760,32 @@ job11_deploy_bucket() {
      	ensure_namespace_auto
         ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
- 	DEPLOY_BUCKET="$(shuf -n 1 -e deploy-artifacts deployment-store deploy-backup pipeline-output release-bucket release-artifacts staging-artifacts prod-deployments ci-output dev-pipeline test-release build-cache image-artifacts lambda-packages terraform-output cloud-functions deploy-packages versioned-deployments rollout-bucket rollout-stage canary-release bucket-publish)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+ 	DEPLOY_BUCKET="$(shuf -n 1 -e \
+	  deploy-artifacts deployment-store deploy-backup pipeline-output \
+	  release-bucket release-artifacts staging-artifacts prod-deployments \
+	  ci-output dev-pipeline test-release build-cache image-artifacts \
+	  lambda-packages terraform-output cloud-functions deploy-packages \
+	  versioned-deployments rollout-bucket rollout-stage canary-release \
+	  bucket-publish artifact-store artifact-cache pipeline-cache \
+	  runner-output build-output compiled-assets serverless-artifacts \
+	  docker-artifacts lambda-layers deploy-bundles snapshot-deployments \
+	  build-assets frontend-deployments backend-deployments job-exports \
+	  release-builds ci-cd-deployments test-results pre-release-assets \
+	  app-deployments versioned-assets binary-packages packaged-artifacts \
+	  auto-deploy-bucket update-channel main-release fallback-release \
+	  qa-deployments nightly-builds weekly-rollouts docker-deploy-bucket \
+	  hotfix-releases release-staging release-dev release-prod \
+	  final-artifacts build-binaries compiled-code static-deploy \
+	  public-deployments internal-deployments config-packages patch-deploy \
+	  zero-downtime-deployments bucket-versioning beta-release \
+	  ci-bucket test-bucket dev-bucket prod-bucket sandbox-deployments \
+	  published-packages oci-deployments dist-folder dist-bucket \
+	  npm-artifacts python-packages maven-deploys go-binaries \
+	  helm-charts k8s-manifests manifests-bucket image-layers \
+	  gitops-bucket registry-export terraform-state bucket-rollout \
+	  changelog-storage changelog-releases milestone-artifacts \
+	  deploy-metadata service-manifests update-pipeline release-summary \
+	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
       	BUCKET_EXISTS=$(oci os bucket get --bucket-name "$DEPLOY_BUCKET" --query 'data.name' --raw-output 2>/dev/null)
         sleep_random 10 20
 	if [ -z "$BUCKET_EXISTS" ]; then
@@ -912,9 +1004,15 @@ job15_create_dynamic_group() {
 	  local USERS=(
 	    "alice" "bob" "charlie" "david" "eva" "frank" "grace" "henry" "ivy" "jack"
 	    "karen" "leo" "mia" "nathan" "olivia" "peter" "quinn" "rachel" "sam" "tina"
-	    "ursula" "victor" "will" "xander" "yuri" "zoe"
-	    "team-alpha" "team-beta" "ops-core" "batch-team" "fintech-dev" "ml-lab"
+	    "ursula" "victor" "will" "xander" "yuri" "zoe" "amy" "brian" "claire" "daniel"
+	    "elena" "felix" "george" "hannah" "isaac" "julia" "kevin" "lisa" "michael"
+	    "nina" "owen" "paula" "ron" "sophie" "tony" "una" "valerie" "wes" "xenia"
+	    "yasmine" "zack" "team-alpha" "team-beta" "team-gamma" "team-delta"
+	    "ops-core" "ml-lab" "data-science" "infra-group" "dev-squad"
+	    "security-team" "networking" "frontend-team" "backend-team"
+	    "cloud-admins" "sandbox-users" "qa-team" "fintech-dev" "iot-team"
 	  )
+
 	
 	  local PURPOSES=(
 	    "devops" "batch-jobs" "analytics" "autoscale" "monitoring" "ai-inference"
@@ -922,6 +1020,13 @@ job15_create_dynamic_group() {
 	    "vpn-access" "db-backup" "event-stream" "data-export" "incident-response"
 	    "terraform-ci" "cloud-health" "hpc-burst" "data-labeling" "iot-agent"
 	    "threat-detection" "compliance-check" "cost-analysis" "zero-trust-policy"
+	    "session-management" "email-service" "ocr-engine" "feature-flagging"
+	    "rate-limiter" "api-gateway" "pubsub-handler" "kafka-stream"
+	    "cdn-edge" "frontend-build" "metrics-ingestion" "timeseries-db"
+	    "prometheus-exporter" "slack-integration" "alert-handler"
+	    "cron-jobs" "dev-preview" "release-pipeline" "load-testing"
+	    "integration-tests" "license-validator" "sftp-transfer"
+	    "db-restore" "ml-training" "fin-data-pipeline" "dns-resolver"
 	  )
 	
 	  local MATCH_RULES=(
@@ -930,6 +1035,21 @@ job15_create_dynamic_group() {
 	    "ANY {resource.type = 'autonomous-database'}"
 	    "ALL {resource.compartment.id = '$TENANCY_OCID'}"
 	    "ALL {resource.type = 'bootvolume'}"
+	    "ALL {resource.type = 'bucket'}"
+	    "ANY {resource.type = 'vcn', resource.compartment.id = '$TENANCY_OCID'}"
+	    "ALL {resource.type = 'subnet'}"
+	    "ALL {resource.type = 'security-list'}"
+	    "ALL {resource.type = 'route-table'}"
+	    "ANY {resource.type = 'group'}"
+	    "ALL {resource.type = 'policy'}"
+	    "ALL {resource.type = 'dynamic-group'}"
+	    "ALL {resource.type = 'user'}"
+	    "ALL {resource.type = 'tag-namespace'}"
+	    "ALL {resource.type = 'instance-pool'}"
+	    "ALL {resource.type = 'instance-configuration'}"
+	    "ALL {resource.type = 'file-system'}"
+	    "ALL {resource.type = 'mount-target'}"
+	    "ANY {resource.type = 'stream'}"
 	  )
 	
 	  local USER="${USERS[RANDOM % ${#USERS[@]}]}"
@@ -975,8 +1095,29 @@ job17_create_autonomous_db() {
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
 	local JOB_NAME="create-paid-autonomous-db"
 
-	local PREFIXES=(sales marketing support ml ai analytics prod test hr finance dev backup log data staging ops infra core research it eng qa user admin security billing monitoring iot archive batch media internal external system network mobile api content insight reporting global region1 region2 cloud internaltool public edge compliance)
-	local FUNCTIONS=(db data store system core service report etl dash pipeline api processor engine runner worker consumer sync fetcher collector ingester writer generator uploader model exporter deployer sink source controller frontend backend scheduler monitor)
+	local PREFIXES=(
+	  sales marketing support ml ai analytics prod test hr finance dev backup log data staging ops infra core research
+	  it eng qa user admin security billing monitoring iot archive batch media internal external system network mobile api
+	  content insight reporting global region1 region2 cloud internaltool public edge compliance
+	  legal training helpdesk product risk mgmt supplychain frontend backend gateway access account customer vendor
+	  sandbox beta alpha gamma delta servicecluster controlplane publicapi privateapi datalake
+	  fraud billingops ci cd cicd scheduler eventbridge emailservice smsservice callcenter
+	  container autoscaler deployment secretsmanager vault scanner observer telem trace alertmetrics
+	  errorhandler replayer identity authorization authentication token issuer agent relay broker
+	  replication syncer backupnode logcollector metricsproxy dbproxy streamingserver orchestrator
+	  kafka zookeeper redis s3 gcs registry grafana prometheus tempo loki vaultbot configmgr
+	)
+	local FUNCTIONS=(
+	  db data store system core service report etl dash pipeline api processor engine runner worker consumer sync
+	  fetcher collector ingester writer generator uploader model exporter deployer sink source controller
+	  frontend backend scheduler monitor validator calculator renderer translator tokenizer classifier
+	  detector extractor transformer rewriter aggregator enricher filter encoder decoder trainer predictor evaluator
+	  executor batcher listener watcher reader streamer broker dispatcher agent messenger handler manager
+	  builder archiver logger parser chunker spawner sandboxer maintainer replayer restorer generator
+	  digester postprocessor preprocessor signer analyzer normalizer hasher cacher seeder packager patcher
+	  resizer scaler compressor deduplicator uploader downloader batchprocessor timeseries syncer
+	  translator filterbot inferencer tagger relabeler deduplicator simulator indexer router resolver registrar
+	)
 	local SUFFIXES=("01" "2025" "$((RANDOM % 100))" "$(date +%y)" "$(date +%m%d)")
 	local DB_NAME_PART="${PREFIXES[RANDOM % ${#PREFIXES[@]}]}-${FUNCTIONS[RANDOM % ${#FUNCTIONS[@]}]}-${SUFFIXES[RANDOM % ${#SUFFIXES[@]}]}-$(uuidgen | cut -c1-6)"
 	local DB_NAME=$(echo "$DB_NAME_PART" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
@@ -1248,57 +1389,172 @@ job22_create_random_nosql_table() {
   local STORAGE_GB=1
 
   local -a TABLE_NAMES=(
-  	"user_profile" "user_activity" "session_tokens" "login_attempts" "audit_logs"
-  	"sensor_data" "device_status" "iot_metrics" "location_updates" "alerts"
-  	"orders" "order_items" "inventory" "product_catalog" "pricing"
-  	"payment_logs" "invoices" "billing_events" "refund_requests" "cart_items"
-  	"notifications" "messages" "email_queue" "sms_queue" "push_events"
-  	"click_stream" "web_events" "page_views" "ab_tests" "feature_flags"
-  	"support_tickets" "error_logs" "service_health" "deployment_events" "api_usage"
+	  "user_profile" "user_activity" "session_tokens" "login_attempts" "audit_logs"
+	  "sensor_data" "device_status" "iot_metrics" "location_updates" "alerts"
+	  "orders" "order_items" "inventory" "product_catalog" "pricing"
+	  "payment_logs" "invoices" "billing_events" "refund_requests" "cart_items"
+	  "notifications" "messages" "email_queue" "sms_queue" "push_events"
+	  "click_stream" "web_events" "page_views" "ab_tests" "feature_flags"
+	  "support_tickets" "error_logs" "service_health" "deployment_events" "api_usage"
+	  "user_permissions" "roles" "access_logs" "session_history" "device_metadata"
+	  "campaigns" "ad_impressions" "conversion_events" "funnel_steps" "referral_links"
+	  "shipping_details" "delivery_status" "returns" "warehouse_stock"
+	  "financial_summary" "tax_records" "transaction_journal" "payouts"
+	  "ml_predictions" "training_jobs" "model_versions" "feature_store" "inference_logs"
+	  "workflow_tasks" "job_queue" "retry_attempts" "sla_breaches" "escalations"
+	  "team_members" "project_assignments" "work_logs" "daily_reports" "calendar_events"
   )
 
   local -a DDL_LIST=(
-	  "CREATE TABLE IF NOT EXISTS %s (user_id STRING, name STRING, email STRING, created_at LONG, PRIMARY KEY(user_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (user_id STRING, action STRING, ts LONG, PRIMARY KEY(user_id, ts))"
-	  "CREATE TABLE IF NOT EXISTS %s (session_id STRING, user_id STRING, token STRING, expiry_ts LONG, PRIMARY KEY(session_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (username STRING, ip STRING, success BOOLEAN, ts LONG, PRIMARY KEY(username, ts))"
-	  "CREATE TABLE IF NOT EXISTS %s (log_id STRING, level STRING, message STRING, ts LONG, PRIMARY KEY(log_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     user_id STRING,
+	     username STRING,
+	     email STRING,
+	     phone STRING,
+	     address STRING,
+	     city STRING,
+	     country STRING,
+	     zip STRING,
+	     status STRING,
+	     created_at LONG,
+	     updated_at LONG,
+	     PRIMARY KEY(user_id)
+	  )"
 	
-	  "CREATE TABLE IF NOT EXISTS %s (device_id STRING, temp FLOAT, humidity FLOAT, ts LONG, PRIMARY KEY(device_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (device_id STRING, status STRING, last_seen LONG, battery INT, PRIMARY KEY(device_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (device_id STRING, metric STRING, value FLOAT, ts LONG, PRIMARY KEY(device_id, metric))"
-	  "CREATE TABLE IF NOT EXISTS %s (user_id STRING, lat DOUBLE, lon DOUBLE, ts LONG, PRIMARY KEY(user_id, ts))"
-	  "CREATE TABLE IF NOT EXISTS %s (alert_id STRING, type STRING, severity STRING, ts LONG, PRIMARY KEY(alert_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     device_id STRING,
+	     device_type STRING,
+	     firmware_version STRING,
+	     battery_level INT,
+	     location STRING,
+	     last_seen_ts LONG,
+	     is_active BOOLEAN,
+	     tags JSON,
+	     manufacturer STRING,
+	     notes STRING,
+	     installed_at LONG,
+	     PRIMARY KEY(device_id)
+	  )"
 	
-	  "CREATE TABLE IF NOT EXISTS %s (order_id STRING, user_id STRING, status STRING, total DOUBLE, created_at LONG, PRIMARY KEY(order_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (item_id STRING, order_id STRING, product_id STRING, quantity INT, PRIMARY KEY(item_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (sku STRING, stock INT, updated_at LONG, PRIMARY KEY(sku))"
-	  "CREATE TABLE IF NOT EXISTS %s (product_id STRING, name STRING, category STRING, price DOUBLE, PRIMARY KEY(product_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (sku STRING, base_price DOUBLE, discount DOUBLE, effective_date LONG, PRIMARY KEY(sku))"
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     order_id STRING,
+	     user_id STRING,
+	     order_status STRING,
+	     payment_method STRING,
+	     total_amount DOUBLE,
+	     tax DOUBLE,
+	     discount DOUBLE,
+	     shipping_address STRING,
+	     created_at LONG,
+	     shipped_at LONG,
+	     delivered_at LONG,
+	     PRIMARY KEY(order_id)
+	  )"
 	
-	  "CREATE TABLE IF NOT EXISTS %s (payment_id STRING, user_id STRING, amount DOUBLE, status STRING, ts LONG, PRIMARY KEY(payment_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (invoice_id STRING, user_id STRING, total DOUBLE, due_date LONG, PRIMARY KEY(invoice_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (event_id STRING, event_type STRING, billing_group STRING, ts LONG, PRIMARY KEY(event_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (refund_id STRING, order_id STRING, reason STRING, status STRING, PRIMARY KEY(refund_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (cart_id STRING, user_id STRING, product_id STRING, qty INT, PRIMARY KEY(cart_id, product_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     event_id STRING,
+	     source STRING,
+	     event_type STRING,
+	     metadata JSON,
+	     user_agent STRING,
+	     ip_address STRING,
+	     region STRING,
+	     latency_ms INT,
+	     success BOOLEAN,
+	     timestamp LONG,
+	     error_code STRING,
+	     PRIMARY KEY(event_id)
+	  )"
 	
-	  "CREATE TABLE IF NOT EXISTS %s (notif_id STRING, user_id STRING, type STRING, sent_at LONG, PRIMARY KEY(notif_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (msg_id STRING, sender STRING, recipient STRING, body STRING, ts LONG, PRIMARY KEY(msg_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (email_id STRING, recipient STRING, subject STRING, queued_at LONG, PRIMARY KEY(email_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (sms_id STRING, phone STRING, content STRING, sent_at LONG, PRIMARY KEY(sms_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (push_id STRING, user_id STRING, platform STRING, ts LONG, PRIMARY KEY(push_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     model_id STRING,
+	     version STRING,
+	     parameters JSON,
+	     accuracy FLOAT,
+	     f1_score FLOAT,
+	     precision FLOAT,
+	     recall FLOAT,
+	     dataset STRING,
+	     trained_by STRING,
+	     trained_at LONG,
+	     notes STRING,
+	     PRIMARY KEY(model_id, version)
+	  )"
 	
-	  "CREATE TABLE IF NOT EXISTS %s (click_id STRING, user_id STRING, element STRING, ts LONG, PRIMARY KEY(click_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (event_id STRING, event_name STRING, metadata JSON, ts LONG, PRIMARY KEY(event_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (view_id STRING, user_id STRING, page STRING, duration INT, ts LONG, PRIMARY KEY(view_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (test_id STRING, group STRING, variant STRING, PRIMARY KEY(test_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (flag STRING, enabled BOOLEAN, updated_at LONG, PRIMARY KEY(flag))"
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     invoice_id STRING,
+	     customer_id STRING,
+	     amount DOUBLE,
+	     currency STRING,
+	     issue_date LONG,
+	     due_date LONG,
+	     payment_status STRING,
+	     items JSON,
+	     tax_amount DOUBLE,
+	     discount_amount DOUBLE,
+	     pdf_url STRING,
+	     PRIMARY KEY(invoice_id)
+	  )"
 	
-	  "CREATE TABLE IF NOT EXISTS %s (ticket_id STRING, user_id STRING, status STRING, priority STRING, created_at LONG, PRIMARY KEY(ticket_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (error_id STRING, code STRING, msg STRING, ts LONG, PRIMARY KEY(error_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (service_id STRING, status STRING, updated_at LONG, PRIMARY KEY(service_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (deploy_id STRING, service STRING, version STRING, ts LONG, PRIMARY KEY(deploy_id))"
-	  "CREATE TABLE IF NOT EXISTS %s (api_id STRING, user_id STRING, endpoint STRING, latency FLOAT, ts LONG, PRIMARY KEY(api_id))"
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     api_call_id STRING,
+	     user_id STRING,
+	     method STRING,
+	     path STRING,
+	     request_headers JSON,
+	     request_body JSON,
+	     response_code INT,
+	     response_time_ms INT,
+	     ts LONG,
+	     geo_location STRING,
+	     client_id STRING,
+	     PRIMARY KEY(api_call_id)
+	  )"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     session_id STRING,
+	     user_id STRING,
+	     start_ts LONG,
+	     end_ts LONG,
+	     ip_address STRING,
+	     device STRING,
+	     browser STRING,
+	     os STRING,
+	     screen_resolution STRING,
+	     location STRING,
+	     session_duration INT,
+	     PRIMARY KEY(session_id)
+	  )"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     job_id STRING,
+	     job_name STRING,
+	     job_type STRING,
+	     status STRING,
+	     created_by STRING,
+	     scheduled_at LONG,
+	     started_at LONG,
+	     finished_at LONG,
+	     duration INT,
+	     result JSON,
+	     retries INT,
+	     PRIMARY KEY(job_id)
+	  )"
+	
+	  "CREATE TABLE IF NOT EXISTS %s (
+	     alert_id STRING,
+	     type STRING,
+	     severity STRING,
+	     source STRING,
+	     is_acknowledged BOOLEAN,
+	     acknowledged_by STRING,
+	     created_at LONG,
+	     resolved_at LONG,
+	     resolution_notes STRING,
+	     tags JSON,
+	     related_tickets JSON,
+	     PRIMARY KEY(alert_id)
+	  )"
   )
 
   local IDX=$((RANDOM % ${#TABLE_NAMES[@]}))

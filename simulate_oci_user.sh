@@ -1391,18 +1391,25 @@ job20_create_random_private_endpoint() {
 	  --query "data" \
 	  --raw-output)
   sleep_random 10 20
-  if oci os private-endpoint create \
+  
+  if ! oci os private-endpoint create \
     --compartment-id "$TENANCY_OCID" \
     --subnet-id "$SUBNET_ID" \
     --prefix "$RANDOM_PREFIX" \
     --access-targets '[{"namespace":"'${NAMESPACE}'", "compartmentId":"*", "bucket":"*"}]' \
     --name "$PE_NAME" \
     --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-    --wait-for-state COMPLETED; then
-    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created Private Endpoint $PE_NAME in subnet $SUBNET_NAME" "success"
-  else
-    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create Private Endpoint $PE_NAME" "fail"
+    --wait-for-state COMPLETED 2>pe_error.log; then
+
+    if grep -q "TooManyPrivateEndpoints" pe_error.log; then
+      log_action "$TIMESTAMP" "$JOB_NAME" "⚠️ Skipped: Private endpoint quota exceeded" "skipped"
+    else
+      log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create Private Endpoint $PE_NAME" "fail"
+    fi
+    return
   fi
+
+  log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created Private Endpoint $PE_NAME in subnet $SUBNET_NAME" "success"
 }
 
 job21_delete_private_endpoint() {

@@ -177,35 +177,93 @@ remove_note_from_freeform_tags() {
 }
 
 generate_fake_project_files() {
-  mkdir -p deploy_tmp
-  FILE_POOL=("main.py" "config.yaml" "requirements.txt" "Dockerfile" ".env.example" "README.md" ".gitignore" "deploy.sh")
-  CONTENT_POOL=(
-    'def handler(event, context):\n  return f"Hello, {event.get(\"user\", \"guest\")}"'
-    'app:\n  name: user-service\n  version: 1.0.0\n  debug: false'
-    'requests\nflask\npydantic'
-    'FROM python:3.9\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nCMD ["python", "main.py"]'
-    'APP_ENV=production\nDB_URI=sqlite:///tmp.db\nSECRET_KEY=demo123'
-    '# Project Title\nThis is a demo deployment package for OCI simulation.'
-    '.env\n__pycache__/\n*.tar.gz\ndeploy_tmp/'
-    '#!/bin/bash\necho "Deploying..."\ntar -czf build.tar.gz .\noci os object put --bucket-name "$DEPLOY_BUCKET" --name "$FOLDER/build.tar.gz" --file build.tar.gz'
+  local BASE_DIR="deploy_tmp"
+  rm -rf "$BASE_DIR"
+  mkdir -p "$BASE_DIR"
+
+  local DIR_POOL=(api assets config docs handlers lib scripts services src tests utils)
+  local DIR_COUNT=$((RANDOM % 6 + 5))
+  local SELECTED_DIRS=($(shuf -e "${DIR_POOL[@]}" -n "$DIR_COUNT"))
+
+  for dir in "${SELECTED_DIRS[@]}"; do
+    mkdir -p "$BASE_DIR/$dir"
+  done
+
+  local FILE_NAMES=(
+    "main.py" "config.yaml" "requirements.txt" "Dockerfile" ".env.example" "README.md"
+    ".gitignore" "deploy.sh" "test_main.py" "helpers.py" "logger.py"
+    "migrate_db.sh" "seed_data.sh" "sample.json" "config.json"
+    "test_utils.py" "test_integration.py" "usage.md" "api_reference.md"
+    "deploy.yml" "terraform.tf" "variables.tf" "setup.cfg" "LICENSE" "CHANGELOG.md"
   )
 
-  local COUNT_FILE=$((RANDOM % 5 + 3))  # Random 3–7 files
-  USED_INDEXES=()
+  local CONTENT_LIST=(
+    "def handler(event, context):\n    user = event.get(\"user\", \"guest\")\n    return f\"Hello, {user}\""
+    "app:\n  name: user-service\n  version: 1.0.0\n  debug: false\n  log_level: INFO"
+    "requests\nflask\npydantic\nsqlalchemy\npytest"
+    "FROM python:3.9\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nCMD [\"python\", \"main.py\"]"
+    "APP_ENV=production\nDB_URI=sqlite:///tmp.db\nSECRET_KEY=demo123\nTIMEOUT=30"
+    "# Project Title\n\nThis is a simulated project for OCI testing.\n\n## Features\n- Simple handler\n- Deployment ready"
+    ".env\n__pycache__/\n*.tar.gz\ndeploy_tmp/\n.env.local\n.vscode/\nbuild.tar.gz"
+    "#!/bin/bash\nset -e\necho \"Deploying...\"\ntar -czf build.tar.gz .\noci os object put --bucket-name \"\$DEPLOY_BUCKET\" --name \"\$FOLDER/build.tar.gz\" --file build.tar.gz"
+    "import unittest\nfrom main import handler\n\nclass TestMain(unittest.TestCase):\n    def test_guest(self):\n        self.assertEqual(handler({}, {}), \"Hello, guest\")"
+    "def greet(name):\n    return f\"Hello, {name}\"\n\ndef add(a, b):\n    return a + b"
+    "import logging\n\ndef get_logger(name):\n    logger = logging.getLogger(name)\n    logger.setLevel(logging.INFO)\n    return logger"
+    "#!/bin/bash\nsqlite3 tmp.db < migrations/init.sql\necho \"Migration done.\"\necho \"Tables created.\""
+    "#!/bin/bash\necho \"Seeding data...\"\nsqlite3 tmp.db \"INSERT INTO users (id, name) VALUES (1, 'admin');\""
+    "{\n  \"users\": [\n    {\"id\": 1, \"name\": \"Alice\"},\n    {\"id\": 2, \"name\": \"Bob\"}\n  ]\n}"
+    "{\n  \"settings\": {\n    \"debug\": true,\n    \"theme\": \"dark\"\n  }\n}"
+    "import unittest\nfrom utils.helpers import greet\n\nclass TestUtils(unittest.TestCase):\n    def test_greet(self):\n        self.assertIn(\"Hello\", greet(\"test\"))"
+    "def test_api():\n    assert True\n\ndef test_db():\n    assert 1 + 1 == 2"
+    "# Usage Guide\n\n1. Clone the repo\n2. Install deps\n3. Run \'python main.py\'\n\n## Environment\nEnsure .env is configured."
+    "# API Reference\n\n### GET /health\nReturns status.\n\n### POST /login\nRequires JSON body."
+    "name: Deploy\non:\n  push:\n    branches: [main]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v2\n      - run: echo \"Building...\""
+    "resource \"null_resource\" \"example\" {\n  provisioner \"local-exec\" {\n    command = \"echo Deploying...\"\n  }\n}"
+    "variable \"region\" {\n  type = string\n  default = \"us-ashburn-1\"\n}"
+    "[flake8]\nmax-line-length = 88\nexclude = .git,__pycache__,build,dist\n\n[mypy]\nignore_missing_imports = true"
+    "MIT License\n\nPermission is hereby granted..."
+    "## Changelog\n\n- v1.0.0 - Initial release\n- v1.0.1 - Added seed script\n- v1.0.2 - Refactored handlers"
+  )
+
+  local TOTAL_FILES=${#FILE_NAMES[@]}
+  local COUNT_FILE=$((RANDOM % 61 + 40))  # 40–100 files
+  local USED_INDEXES=()
 
   for ((i = 0; i < COUNT_FILE; i++)); do
-    while :; do
-      IDX=$((RANDOM % ${#FILE_POOL[@]}))
-      if [[ ! " ${USED_INDEXES[@]} " =~ " ${IDX} " ]]; then
+    local tries=0
+    while (( tries < 100 )); do
+      IDX=$((RANDOM % TOTAL_FILES))
+      if [[ ! " ${USED_INDEXES[*]} " =~ " ${IDX} " ]]; then
         USED_INDEXES+=("$IDX")
-        FILENAME=${FILE_POOL[$IDX]}
-        CONTENT=${CONTENT_POOL[$IDX]}
-        echo -e "$CONTENT" > "deploy_tmp/$FILENAME"
-        echo "📝 Created $FILENAME"
+        FILENAME=${FILE_NAMES[$IDX]}
+        CONTENT=${CONTENT_LIST[$IDX]}
+        DIR=${SELECTED_DIRS[$((RANDOM % ${#SELECTED_DIRS[@]}))]}
+        FILE_PATH="$BASE_DIR/$DIR/$FILENAME"
+        mkdir -p "$(dirname "$FILE_PATH")"
+        echo -e "$CONTENT" > "$FILE_PATH"
+        echo "📝 Created $DIR/$FILENAME"
         break
       fi
+      ((tries++))
     done
   done
+
+  echo "✅ Finished generating $COUNT_FILE fake project files under deploy_tmp/"
+}
+
+generate_deploy_filename() {
+  local PREFIXES=("oci" "cloud" "sim" "deploy" "pkg" "infra" "release" "bundle" "codebase" "snapshot")
+  local SEPARATORS=("-" "_" "")
+  local EXTENSIONS=("tar.gz" "tgz")
+
+  local prefix="${PREFIXES[$((RANDOM % ${#PREFIXES[@]}))]}"
+  local sep="${SEPARATORS[$((RANDOM % ${#SEPARATORS[@]}))]}"
+  local ext="${EXTENSIONS[$((RANDOM % ${#EXTENSIONS[@]}))]}"
+
+  local ts="$(date +%Y%m%d%H%M%S)"
+  local hash="$(head /dev/urandom | tr -dc a-z0-9 | head -c$((5 + RANDOM % 3)))"
+
+  echo "${prefix}${sep}${ts}${sep}${hash}.${ext}"
 }
 
 random_password() {
@@ -801,7 +859,7 @@ job11_deploy_bucket() {
  	# Create simulated project files
  	generate_fake_project_files
  	# Archive it
- 	DEPLOY_FILE="code-$(date +%Y%m%d%H%M)-$RANDOM.tar.gz"
+ 	DEPLOY_FILE=$(generate_deploy_filename)
  	tar -czf "$DEPLOY_FILE" -C deploy_tmp .
   	# Upload to selected bucket
   	FOLDER="deploy/$(date +%Y-%m-%d)"

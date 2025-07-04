@@ -1687,7 +1687,7 @@ job24_upload_random_row_to_nosql_table() {
     return;
   fi
   
-  local ROW_COUNT=$((RANDOM % 5 + 1))
+  local ROW_COUNT=$((RANDOM % 10 + 1))
   local PARSED_COLUMNS=$(parse_json_array "$COLUMNS")
   
   log_action "$TIMESTAMP" "$JOB_NAME" "⬆️ Starting to upload $ROW_COUNT row(s) into table '$TABLE_NAME'" "info"

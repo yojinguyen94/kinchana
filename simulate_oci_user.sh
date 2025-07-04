@@ -1340,7 +1340,7 @@ job20_create_random_private_endpoint() {
 	  --compartment-id "$TENANCY_OCID" \
 	  --query "length(data)" \
 	  --raw-output)
-   
+  CURRENT_PE_COUNT=${CURRENT_PE_COUNT:-0}
   if [[ "$CURRENT_PE_COUNT" -ge "$MAX_PE_LIMIT" ]]; then
     log_action "$TIMESTAMP" "$JOB_NAME" \
 	    "⚠️ PE limit reached: $CURRENT_PE_COUNT / $MAX_PE_LIMIT" "skipped"

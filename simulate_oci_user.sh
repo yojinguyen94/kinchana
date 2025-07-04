@@ -1492,7 +1492,7 @@ job22_create_random_nosql_table() {
 	     device_id STRING,
 	     device_type STRING,
 	     firmware_version STRING,
-	     battery_level INT,
+	     battery_level INTEGER,
 	     location STRING,
 	     last_seen_ts LONG,
 	     is_active BOOLEAN,
@@ -1526,7 +1526,7 @@ job22_create_random_nosql_table() {
 	     user_agent STRING,
 	     ip_address STRING,
 	     region STRING,
-	     latency_ms INT,
+	     latency_ms INTEGER,
 	     success BOOLEAN,
 	     timestamp LONG,
 	     error_code STRING,
@@ -1570,8 +1570,8 @@ job22_create_random_nosql_table() {
 	     path STRING,
 	     request_headers JSON,
 	     request_body JSON,
-	     response_code INT,
-	     response_time_ms INT,
+	     response_code INTEGER,
+	     response_time_ms INTEGER,
 	     ts LONG,
 	     geo_location STRING,
 	     client_id STRING,
@@ -1589,7 +1589,7 @@ job22_create_random_nosql_table() {
 	     os STRING,
 	     screen_resolution STRING,
 	     location STRING,
-	     session_duration INT,
+	     session_duration INTEGER,
 	     PRIMARY KEY(session_id)
 	  )"
 	
@@ -1602,9 +1602,9 @@ job22_create_random_nosql_table() {
 	     scheduled_at LONG,
 	     started_at LONG,
 	     finished_at LONG,
-	     duration INT,
+	     duration INTEGER,
 	     result JSON,
-	     retries INT,
+	     retries INTEGER,
 	     PRIMARY KEY(job_id)
 	  )"
 	
@@ -1645,7 +1645,7 @@ job22_create_random_nosql_table() {
     --ddl-statement "$DDL" \
     --table-limits "{\"maxReadUnits\": $READ_UNITS, \"maxWriteUnits\": $WRITE_UNITS, \"maxStorageInGBs\": $STORAGE_GB}" \
     --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-    --wait-for-state SUCCEEDED; then
+    --wait-for-state SUCCEEDED 2> db_error.log; then
     log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created NoSQL table $TABLE_NAME" "success"
   else
     log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create NoSQL table $TABLE_NAME" "fail"
@@ -1728,7 +1728,7 @@ job24_upload_random_row_to_nosql_table() {
 	    --value "$VALUE_JSON" --force; then
 	    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Uploaded row: $VALUE_JSON" "success"
     else
-	    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed insert into $TABLE_NAME: $OUTPUT" "fail"
+	    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed insert into $TABLE_NAME: $VALUE_JSON" "fail"
     fi
     sleep_random 10 30
   done

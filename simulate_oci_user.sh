@@ -1787,7 +1787,7 @@ job26_generate_temp_presigned_url() {
     readarray -t ITEMS_ARRAY <<< "$ITEMS"
     local RANDOM_INDEX=$(( RANDOM % ${#ITEMS_ARRAY[@]} ))
     local OBJECT_NAME="${ITEMS_ARRAY[$RANDOM_INDEX]}"
-    log_action "$TIMESTAMP" "$JOB_NAME" "📂 Found existing object: $OBJECT_NAME in bucket [$BUCKET_NAME]" "info"
+    log_action "$TIMESTAMP" "$JOB_NAME" "📂 Found existing object: $OBJECT_NAME in bucket $BUCKET_NAME" "info"
   fi
 
   local ACCESS_TYPES=("ObjectRead" "ObjectWrite" "ObjectReadWrite")
@@ -1798,7 +1798,7 @@ job26_generate_temp_presigned_url() {
 
   local PAR_NAME="par-$(date +%H%M%S)-$(openssl rand -hex 1)"
 
-  log_action "$TIMESTAMP" "$JOB_NAME" "🪪 Creating PAR [$PAR_NAME] for object [$OBJECT_NAME] in bucket [$BUCKET_NAME]" "info"
+  log_action "$TIMESTAMP" "$JOB_NAME" "🪪 Creating PAR $PAR_NAME for object $OBJECT_NAME in bucket $BUCKET_NAME" "info"
   log_action "$TIMESTAMP" "$JOB_NAME" "📋 Access: $CHOSEN_ACCESS | Expiry: $EXPIRES_AT" "info"
 
   local PAR_OUTPUT=$(oci os preauth-request create \
@@ -1812,8 +1812,42 @@ job26_generate_temp_presigned_url() {
   if [[ -n "$PAR_OUTPUT" ]]; then
     log_action "$TIMESTAMP" "$JOB_NAME" "✅ PAR created: https://objectstorage.$REGION.oraclecloud.com$PAR_OUTPUT" "success"
   else
-    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create PAR for [$OBJECT_NAME]" "fail"
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create PAR for $OBJECT_NAME" "fail"
   fi
+}
+
+job27_export_autonomous_db_wallet() {
+  local JOB_NAME="export_autonomous_db_wallet"
+  log_action "$TIMESTAMP" "$JOB_NAME" "📦 Export wallet from Autonomous DB..." "start"
+  local DBS=$(oci db autonomous-database list \
+	    --compartment-id "$TENANCY_OCID" \
+	    --query "data[?\"lifecycle-state\"=='AVAILABLE'].{id:id, name:\"display-name\"}" \
+	    --raw-output)
+  local DB_COUNT=$(echo "$DBS" | grep -c '"id"')
+  if [[ -z "$DBS" || "$DB_COUNT" -eq 0 ]]; then
+	log_action "$TIMESTAMP" "$JOB_NAME" "❌ No Autonomous DB [AVAILABLE] found to export wallet" "skipped"
+   	return
+  fi
+  local SELECTED_LINE=$((RANDOM % DB_COUNT + 1))
+  local SELECTED=$(parse_json_array "$DBS" | sed -n "${SELECTED_LINE}p")
+  IFS='|' read -r DB_OCID DB_NAME <<< "$SELECTED"
+
+  local WALLET_NAME="wallet-$(date +%s%N | sha256sum | cut -c1-12).zip"
+  local WALLET_PASSWORD=$(random_password)
+  
+  log_action "$TIMESTAMP" "$JOB_NAME" "🔐 Exporting wallet to $WALLET_NAME for DB: $DB_NAME ..." "info"
+  sleep_random 10 20
+  oci db autonomous-database generate-wallet \
+    --autonomous-database-id "$DB_OCID" \
+    --password "$WALLET_PASSWORD" \
+    --file "$WALLET_NAME" >/dev/null
+
+  if [[ -f "$WALLET_NAME" ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Wallet exported to $WALLET_NAME" "success"
+  else
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to export wallet for DB: $DB_NAME" "fail"
+  fi
+  rm -f "$WALLET_NAME"
 }
 
 # === Session Check ===
@@ -1854,6 +1888,7 @@ ALL_JOBS=(
   job24_upload_random_row_to_nosql_table
   job25_update_bucket_policies
   job26_generate_temp_presigned_url
+  job27_export_autonomous_db_wallet
 )
 
 # 🧹 Remove job log entries older than 7 days

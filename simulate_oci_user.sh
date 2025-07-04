@@ -9,6 +9,7 @@ LOG_DIR="$HOME/oci-activity-logs"
 CSV_LOG="$LOG_DIR/oci_activity_log.csv"
 JSON_LOG="$LOG_DIR/oci_activity_log.json"
 ACTION_LOG_FILE="/tmp/oci_adb_action_log.txt"
+OCI_BEHAVIOR_FILE="$LOG_DIR/oci_user_behavior.log"
 NOTES=(
   "backup-required"
   "migrated-from-vm"
@@ -1396,9 +1397,10 @@ job24_upload_random_row_to_nosql_table() {
 #  log_action "$TIMESTAMP" "session" "❌ Get user info" "fail"
 #fi
 
-# === Randomly select number of jobs to run ===
-JOB_COUNT=$((RANDOM % 2 + 1))  # 1–2 job
+# Choose how many jobs to run this session (1–2)
+JOB_COUNT=$((RANDOM % 2 + 1))
 
+# List of all available jobs
 ALL_JOBS=(
   job1_list_iam
   job2_check_quota
@@ -1426,14 +1428,53 @@ ALL_JOBS=(
   job24_upload_random_row_to_nosql_table
 )
 
-SHUFFLED=($(shuf -e "${ALL_JOBS[@]}"))
-LOG_JOBS=()
+# 🧹 Remove job log entries older than 7 days
+clean_old_job_logs() {
+  local logfile=$OCI_BEHAVIOR_FILE
+  local cutoff_date
+  cutoff_date=$(date -d "-7 days" +%F)
 
-for i in $(seq 1 $JOB_COUNT); do
-  FUNC="${SHUFFLED[$((i-1))]}"
+  if [[ -f "$logfile" ]]; then
+    awk -F"|" -v cutoff="$cutoff_date" '$1 >= cutoff' "$logfile" > "${logfile}.tmp" && mv "${logfile}.tmp" "$logfile"
+  fi
+}
+
+# 📜 Get recently executed jobs within the last N days
+get_recent_jobs() {
+  local days_back="${1:-3}"
+  local logfile="$HOME/.oci_user_behavior.log"
+
+  if [[ -f "$logfile" ]]; then
+    awk -v since="$(date -d "-$days_back days" +%F)" -F"|" '$1 >= since { print $2 }' "$logfile" | sort | uniq
+  fi
+}
+
+# 🚀 Main logic
+clean_old_job_logs
+
+# Collect recent jobs (to avoid repeating them)
+RECENT_JOBS=($(get_recent_jobs 3))
+AVAILABLE_JOBS=()
+
+# Filter out recently executed jobs
+for job in "${ALL_JOBS[@]}"; do
+  if [[ ! " ${RECENT_JOBS[*]} " =~ " $job " ]]; then
+    AVAILABLE_JOBS+=("$job")
+  fi
+done
+
+# Fallback: if not enough fresh jobs, use the full list
+if [[ ${#AVAILABLE_JOBS[@]} -lt $JOB_COUNT ]]; then
+  SELECTED_JOBS=( $(shuf -e "${ALL_JOBS[@]}" -n "$JOB_COUNT") )
+else
+  SELECTED_JOBS=( $(shuf -e "${AVAILABLE_JOBS[@]}" -n "$JOB_COUNT") )
+fi
+
+# Execute selected jobs
+for FUNC in "${SELECTED_JOBS[@]}"; do
   echo "▶️ Running: $FUNC"
-  LOG_JOBS+=("$FUNC")
   "$FUNC"
+  echo "$(date '+%F %T')|$FUNC" >> $OCI_BEHAVIOR_FILE
   sleep_random 30 60
 done
 

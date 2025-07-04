@@ -317,7 +317,23 @@ job3_upload_random_files_to_bucket() {
 	ensure_namespace_auto
 	ensure_tag "auto-delete" "Mark for auto deletion"
 	ensure_tag "auto-delete-date" "Scheduled auto delete date"
-	BUCKET_NAME="$(shuf -n 1 -e app-logs media-assets db-backup invoice-data user-files)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+	BUCKET_NAME="$(shuf -n 1 -e \
+	  app-logs media-assets db-backup invoice-data user-files \
+	  analytics-data web-uploads archive-files system-dumps temp-storage \
+	  config-snapshots public-content internal-backups nightly-reports \
+	  event-logs docker-images container-layers lambda-archives frontend-assets \
+	  raw-data processed-data staging-bucket final-exports customer-uploads \
+	  logs-central user-avatars thumbnails db-dumps prod-exports \
+	  temp-cache build-artifacts static-files secure-storage upload-zone \
+	  metrics-data test-exports webhooks-storage incoming-data mail-logs \
+	  infra-logs api-gateway-logs cloudtrail-logs monitoring-events \
+	  terraform-states git-repos nightly-dumps chatbot-logs system-audit \
+	  vpn-keys server-snapshots postgres-exports mysql-dumps \
+	  redis-backup kafka-logs billing-records security-events \
+	  s3-mirror bucket-sandbox redshift-exports elastic-dumps \
+	  web-assets admin-files encrypted-uploads crash-reports \
+	  api-responses compressed-assets debug-dumps \
+	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
 	DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-15d
 	log_action "$TIMESTAMP" "bucket-create" "🎯 Creating bucket $BUCKET_NAME with auto-delete" "start"
 	sleep_random 10 20

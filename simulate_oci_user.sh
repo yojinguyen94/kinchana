@@ -340,69 +340,7 @@ generate_realistic_value() {
   esac
 }
 
-
-job1_list_iam() {
-      log_action "$TIMESTAMP" "info" "List IAM info" "start"
-      sleep_random 10 20
-      oci iam region-subscription list && log_action "$TIMESTAMP" "region" "✅ List region subscription" "success"
-      sleep_random 10 20
-      oci iam availability-domain list && log_action "$TIMESTAMP" "availability-domain" "✅ List availability domains" "success"
-}
-
-job2_check_quota() {
-      AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
-      sleep_random 5 30
-      oci limits resource-availability get --service-name compute \
-        --limit-name standard-e2-core-count \
-        --availability-domain "$AD" \
-        --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "quota" "✅ Get compute quota" "success"
-}
-
-job3_upload_random_files_to_bucket() {
-      BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
-	    --query "data[].name" --raw-output)
-
-      local ACTION=$((RANDOM % 2))
-      BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
-      
-      if [[ "$ACTION" -eq 0 && -n "$BUCKETS" && "$BUCKET_COUNT" -gt 0 ]]; then
-	ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
-	readarray -t BUCKET_ARRAY <<< "$ITEMS"
-	RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
-	BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
-        log_action "$TIMESTAMP" "select-bucket" "🎯 Selected 1 random bucket out of $BUCKET_COUNT: $BUCKET_NAME" "info"
-      else
-	ensure_namespace_auto
-	ensure_tag "auto-delete" "Mark for auto deletion"
-	ensure_tag "auto-delete-date" "Scheduled auto delete date"
-	BUCKET_NAME="$(shuf -n 1 -e \
-	  app-logs media-assets db-backup invoice-data user-files \
-	  analytics-data web-uploads archive-files system-dumps temp-storage \
-	  config-snapshots public-content internal-backups nightly-reports \
-	  event-logs docker-images container-layers lambda-archives frontend-assets \
-	  raw-data processed-data staging-bucket final-exports customer-uploads \
-	  logs-central user-avatars thumbnails db-dumps prod-exports \
-	  temp-cache build-artifacts static-files secure-storage upload-zone \
-	  metrics-data test-exports webhooks-storage incoming-data mail-logs \
-	  infra-logs api-gateway-logs cloudtrail-logs monitoring-events \
-	  terraform-states git-repos nightly-dumps chatbot-logs system-audit \
-	  vpn-keys server-snapshots postgres-exports mysql-dumps \
-	  redis-backup kafka-logs billing-records security-events \
-	  s3-mirror bucket-sandbox redshift-exports elastic-dumps \
-	  web-assets admin-files encrypted-uploads crash-reports \
-	  api-responses compressed-assets debug-dumps \
-	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-	DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-15d
-	log_action "$TIMESTAMP" "bucket-create" "🎯 Creating bucket $BUCKET_NAME with auto-delete" "start"
-	sleep_random 10 20
-        oci os bucket create \
-	        --name "$BUCKET_NAME" \
-	        --compartment-id "$TENANCY_OCID" \
-	        --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-	        && log_action "$TIMESTAMP" "bucket-create" "✅ Created $BUCKET_NAME with auto-delete-date=$DELETE_DATE" "success" \
-	        || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create $BUCKET_NAME" "fail"
-      fi
-      
+generate_file_upload(){
       local FILENAME_PATTERNS=(
 	  "system_log_%Y%m%d_%H%M%S_$RANDOM.log"
 	  "user_activity_%Y-%m-%d_$RANDOM.txt"
@@ -503,16 +441,80 @@ job3_upload_random_files_to_bucket() {
 	[PRIVATE_KEY]
 	</key>"
       )
+      local FILE_TEMPLATE=${FILENAME_PATTERNS[$((RANDOM % ${#FILENAME_PATTERNS[@]}))]}
+      local FILE_NAME=$(date +"$FILE_TEMPLATE")
+      local FILE_CONTENT="${CONTENTS[$((RANDOM % ${#CONTENTS[@]}))]}"
+       
+      echo "$FILE_CONTENT" > "$FILE_NAME"
+      echo "$FILE_NAME"
+}
 
+job1_list_iam() {
+      log_action "$TIMESTAMP" "info" "List IAM info" "start"
+      sleep_random 10 20
+      oci iam region-subscription list && log_action "$TIMESTAMP" "region" "✅ List region subscription" "success"
+      sleep_random 10 20
+      oci iam availability-domain list && log_action "$TIMESTAMP" "availability-domain" "✅ List availability domains" "success"
+}
+
+job2_check_quota() {
+      AD=$(oci iam availability-domain list --query "data[0].name" --raw-output)
+      sleep_random 5 30
+      oci limits resource-availability get --service-name compute \
+        --limit-name standard-e2-core-count \
+        --availability-domain "$AD" \
+        --compartment-id "$TENANCY_OCID" && log_action "$TIMESTAMP" "quota" "✅ Get compute quota" "success"
+}
+
+job3_upload_random_files_to_bucket() {
+      BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
+	    --query "data[].name" --raw-output)
+
+      local ACTION=$((RANDOM % 2))
+      BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
+      
+      if [[ "$ACTION" -eq 0 && -n "$BUCKETS" && "$BUCKET_COUNT" -gt 0 ]]; then
+	ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
+	readarray -t BUCKET_ARRAY <<< "$ITEMS"
+	RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
+	BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
+        log_action "$TIMESTAMP" "select-bucket" "🎯 Selected 1 random bucket out of $BUCKET_COUNT: $BUCKET_NAME" "info"
+      else
+	ensure_namespace_auto
+	ensure_tag "auto-delete" "Mark for auto deletion"
+	ensure_tag "auto-delete-date" "Scheduled auto delete date"
+	BUCKET_NAME="$(shuf -n 1 -e \
+	  app-logs media-assets db-backup invoice-data user-files \
+	  analytics-data web-uploads archive-files system-dumps temp-storage \
+	  config-snapshots public-content internal-backups nightly-reports \
+	  event-logs docker-images container-layers lambda-archives frontend-assets \
+	  raw-data processed-data staging-bucket final-exports customer-uploads \
+	  logs-central user-avatars thumbnails db-dumps prod-exports \
+	  temp-cache build-artifacts static-files secure-storage upload-zone \
+	  metrics-data test-exports webhooks-storage incoming-data mail-logs \
+	  infra-logs api-gateway-logs cloudtrail-logs monitoring-events \
+	  terraform-states git-repos nightly-dumps chatbot-logs system-audit \
+	  vpn-keys server-snapshots postgres-exports mysql-dumps \
+	  redis-backup kafka-logs billing-records security-events \
+	  s3-mirror bucket-sandbox redshift-exports elastic-dumps \
+	  web-assets admin-files encrypted-uploads crash-reports \
+	  api-responses compressed-assets debug-dumps \
+	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+	DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-15d
+	log_action "$TIMESTAMP" "bucket-create" "🎯 Creating bucket $BUCKET_NAME with auto-delete" "start"
+	sleep_random 10 20
+        oci os bucket create \
+	        --name "$BUCKET_NAME" \
+	        --compartment-id "$TENANCY_OCID" \
+	        --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+	        && log_action "$TIMESTAMP" "bucket-create" "✅ Created $BUCKET_NAME with auto-delete-date=$DELETE_DATE" "success" \
+	        || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create $BUCKET_NAME" "fail"
+      fi
 	
       local NUM_UPLOADS=$((RANDOM % 5 + 1)) # 1–5 files
 	
       for ((i = 1; i <= NUM_UPLOADS; i++)); do
-	local FILE_TEMPLATE=${FILENAME_PATTERNS[$((RANDOM % ${#FILENAME_PATTERNS[@]}))]}
-	local FILE_NAME=$(date +"$FILE_TEMPLATE")
-	local FILE_CONTENT="${CONTENTS[$((RANDOM % ${#CONTENTS[@]}))]}"
-	
-	echo "$FILE_CONTENT" > "$FILE_NAME"
+	local FILE_NAME=$(generate_file_upload)
 	
 	if oci os object put --bucket-name "$BUCKET_NAME" --file "$FILE_NAME" --force; then
 	   log_action "$TIMESTAMP" "bucket-upload" "✅ Uploaded $FILE_NAME to $BUCKET_NAME" "success"
@@ -1747,6 +1749,73 @@ job25_update_bucket_policies() {
   fi
 }
 
+job26_generate_temp_presigned_url() {
+  local JOB_NAME="generate_temp_presigned_url"
+  log_action "$TIMESTAMP" "$JOB_NAME" "🔐 Generating Pre-Authenticated Request (PAR)..." "start"
+  local BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
+	    --query "data[].name" --raw-output)
+	
+  local BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
+  if [[ -z "$BUCKETS" || "$BUCKET_COUNT" -eq 0 ]]; then
+	log_action "$TIMESTAMP" "$JOB_NAME" "❌ No buckets found to Generate Pre-Authenticated" "skipped"
+	return
+  fi
+  local BUCKET_ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
+  readarray -t BUCKET_ARRAY <<< "$BUCKET_ITEMS"
+  local RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
+  local BUCKET_NAME="${BUCKET_ARRAY[$RANDOM_INDEX]}"
+  sleep_random 10 20
+  
+  local OBJECT_LIST=$(oci os object list --bucket-name "$BUCKET_NAME" \
+	    --query "data[*].name" --raw-output)
+  sleep_random 10 20
+  local OBJECT_LIST_COUNT=$(echo "$OBJECT_LIST" | grep -c '"')
+
+  if [[ -z "$OBJECT_LIST" || "$OBJECT_LIST_COUNT" -eq 0 ]]; then
+     local OBJECT_NAME=$(generate_file_upload)
+     log_action "$TIMESTAMP" "$JOB_NAME" "⬆️ Starting to upload $OBJECT_NAME into bucket '$BUCKET_NAME'" "info"
+     if oci os object put --bucket-name "$BUCKET_NAME" --file "$OBJECT_NAME" --force; then
+     	   log_action "$TIMESTAMP" "$JOB_NAME" "✅ Uploaded $OBJECT_NAME to $BUCKET_NAME" "success"
+	   rm -f "$OBJECT_NAME"
+     else
+    	   log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to upload $OBJECT_NAME to $BUCKET_NAME" "fail"
+	   rm -f "$OBJECT_NAME"
+           return
+     fi
+  else
+    local ITEMS=$(echo "$OBJECT_LIST" | grep -o '".*"' | tr -d '"')
+    readarray -t ITEMS_ARRAY <<< "$ITEMS"
+    local RANDOM_INDEX=$(( RANDOM % ${#ITEMS_ARRAY[@]} ))
+    local OBJECT_NAME="${ITEMS_ARRAY[$RANDOM_INDEX]}"
+    log_action "$TIMESTAMP" "$JOB_NAME" "📂 Found existing object: $OBJECT_NAME in bucket [$BUCKET_NAME]" "info"
+  fi
+
+  local ACCESS_TYPES=("ObjectRead" "ObjectWrite" "ObjectReadWrite")
+  local CHOSEN_ACCESS=$(shuf -n 1 -e "${ACCESS_TYPES[@]}")
+
+  local MINUTES=$((RANDOM % 345 + 15))
+  local EXPIRES_AT=$(date -u -d "+$MINUTES minutes" '+%Y-%m-%dT%H:%M:%SZ')
+
+  local PAR_NAME="par-$(date +%H%M%S)-$(openssl rand -hex 1)"
+
+  log_action "$TIMESTAMP" "$JOB_NAME" "🪪 Creating PAR [$PAR_NAME] for object [$OBJECT_NAME] in bucket [$BUCKET_NAME]" "info"
+  log_action "$TIMESTAMP" "$JOB_NAME" "📋 Access: $CHOSEN_ACCESS | Expiry: $EXPIRES_AT" "info"
+
+  local PAR_OUTPUT=$(oci os preauth-request create \
+    --bucket-name "$BUCKET_NAME" \
+    --name "$PAR_NAME" \
+    --access-type "$CHOSEN_ACCESS" \
+    --object-name "$OBJECT_NAME" \
+    --time-expires "$EXPIRES_AT" \
+    --query "data.\"access-uri\"" --raw-output)
+
+  if [[ -n "$PAR_OUTPUT" ]]; then
+    log_action "$TIMESTAMP" "$JOB_NAME" "✅ PAR created: https://objectstorage.$REGION.oraclecloud.com$PAR_OUTPUT" "success"
+  else
+    log_action "$TIMESTAMP" "$JOB_NAME" "❌ Failed to create PAR for [$OBJECT_NAME]" "fail"
+  fi
+}
+
 # === Session Check ===
 #if oci iam user get --user-id "$USER_ID" &> /dev/null; then
 #  log_action "$TIMESTAMP" "session" "✅ Get user info" "success"
@@ -1784,6 +1853,7 @@ ALL_JOBS=(
   job23_delete_nosql_table
   job24_upload_random_row_to_nosql_table
   job25_update_bucket_policies
+  job26_generate_temp_presigned_url
 )
 
 # 🧹 Remove job log entries older than 7 days

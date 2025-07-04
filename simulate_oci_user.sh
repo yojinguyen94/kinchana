@@ -1014,8 +1014,8 @@ job14_edit_volume() {
 	
 	  log_action "$TIMESTAMP" "edit-volume-size" "📦 Available Block Volume Storage: ${AVAILABLE_STORAGE} GB" "info"
 	
-	  if [[ "$AVAILABLE_STORAGE" -lt 60 ]]; then
-	    log_action "$TIMESTAMP" "edit-volume-size" "⚠️ Skipped: not enough storage (need ≥60 GB, available: $AVAILABLE_STORAGE)" "skipped"
+	  if [[ "$AVAILABLE_STORAGE" -lt 1000 ]]; then
+	    log_action "$TIMESTAMP" "edit-volume-size" "⚠️ Skipped: not enough storage (available: $AVAILABLE_STORAGE) - Reason: Trial Expired" "skipped"
 	    return
 	  fi
 	

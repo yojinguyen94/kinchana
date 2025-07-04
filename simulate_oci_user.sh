@@ -1455,6 +1455,7 @@ clean_old_job_logs
 # Collect recent jobs (to avoid repeating them)
 RECENT_JOBS=($(get_recent_jobs 3))
 AVAILABLE_JOBS=()
+LOG_JOBS=()
 
 # Filter out recently executed jobs
 for job in "${ALL_JOBS[@]}"; do
@@ -1475,6 +1476,7 @@ for FUNC in "${SELECTED_JOBS[@]}"; do
   echo "▶️ Running: $FUNC"
   "$FUNC"
   echo "$(date '+%F %T')|$FUNC" >> $OCI_BEHAVIOR_FILE
+  LOG_JOBS+=("$FUNC")
   sleep_random 30 60
 done
 

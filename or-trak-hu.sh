@@ -391,7 +391,8 @@ maxsize_limit=500
 
 echo "🔍 Scanning uam for size greater than ${maxsize_limit}MB..."
 
-while read -r id name size_raw; do
+while IFS='|' read -r info status; do
+    read -r id name size_raw <<< "$info"
     size=$(echo "$size_raw" | awk '{print $1}')
 
     if [[ "$size" =~ ^([0-9.]+)([kMG]B)$ ]]; then
@@ -406,12 +407,12 @@ while read -r id name size_raw; do
 
         cmp=$(echo "$size_mb > $maxsize_limit" | bc -l)
         if [[ "$cmp" == "1" ]]; then
-            maxsize_restarted_threads+=("$name - Size: $size")
+            maxsize_restarted_threads+=("$name - Uptime: $(echo $status | sed 's/Up //') - Size: $size")
             ((maxsize_number_restarted+=1))
             sudo docker restart "$id"
         fi
     fi
-done < <(sudo docker ps -a --size --filter ancestor="$imageName" --format '{{.ID}} {{.Names}} {{.Size}}')
+done < <(sudo docker ps -a --size --filter ancestor="$imageName" --format '{{.ID}} {{.Names}} {{.Size}}|{{.Status}}')
 
 if [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
     maxsize_thread_list="$maxsize_number_restarted uam(s) due to size > ${maxsize_limit}MB:%0A"

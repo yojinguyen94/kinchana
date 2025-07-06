@@ -8,7 +8,7 @@ LOG="$LOG_DIR/run_random_time.log"
 JSON_LOG="$LOG_DIR/oci_activity_log.json"
 UTC_NOW=$(date -u '+%F %T')
 STATE_FILE="/tmp/oci_random_state_$ZONE"
-RANDOM_CHANCE=$(( RANDOM % 10 ))
+RANDOM_CHANCE=$(( RANDOM % 8 ))
 
 mkdir -p "$LOG_DIR"
 

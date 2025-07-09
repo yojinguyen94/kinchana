@@ -817,47 +817,64 @@ job10_cleanup_vcn_and_volumes() {
 }
 
 job11_deploy_bucket() {
-     	ensure_namespace_auto
-        ensure_tag "auto-delete" "Mark for auto deletion"
-	ensure_tag "auto-delete-date" "Scheduled auto delete date"
- 	DEPLOY_BUCKET="$(shuf -n 1 -e \
-	  deploy-artifacts deployment-store deploy-backup pipeline-output \
-	  release-bucket release-artifacts staging-artifacts prod-deployments \
-	  ci-output dev-pipeline test-release build-cache image-artifacts \
-	  lambda-packages terraform-output cloud-functions deploy-packages \
-	  versioned-deployments rollout-bucket rollout-stage canary-release \
-	  bucket-publish artifact-store artifact-cache pipeline-cache \
-	  runner-output build-output compiled-assets serverless-artifacts \
-	  docker-artifacts lambda-layers deploy-bundles snapshot-deployments \
-	  build-assets frontend-deployments backend-deployments job-exports \
-	  release-builds ci-cd-deployments test-results pre-release-assets \
-	  app-deployments versioned-assets binary-packages packaged-artifacts \
-	  auto-deploy-bucket update-channel main-release fallback-release \
-	  qa-deployments nightly-builds weekly-rollouts docker-deploy-bucket \
-	  hotfix-releases release-staging release-dev release-prod \
-	  final-artifacts build-binaries compiled-code static-deploy \
-	  public-deployments internal-deployments config-packages patch-deploy \
-	  zero-downtime-deployments bucket-versioning beta-release \
-	  ci-bucket test-bucket dev-bucket prod-bucket sandbox-deployments \
-	  published-packages oci-deployments dist-folder dist-bucket \
-	  npm-artifacts python-packages maven-deploys go-binaries \
-	  helm-charts k8s-manifests manifests-bucket image-layers \
-	  gitops-bucket registry-export terraform-state bucket-rollout \
-	  changelog-storage changelog-releases milestone-artifacts \
-	  deploy-metadata service-manifests update-pipeline release-summary \
-	)-$(date +%Y%m%d)-$(openssl rand -hex 2)"
-      	BUCKET_EXISTS=$(oci os bucket get --bucket-name "$DEPLOY_BUCKET" --query 'data.name' --raw-output 2>/dev/null)
-        sleep_random 10 20
-	if [ -z "$BUCKET_EXISTS" ]; then
-	  DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5-15d
-	  oci os bucket create \
-	    --name "$DEPLOY_BUCKET" \
-	    --compartment-id "$TENANCY_OCID" \
-	    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
-	    && log_action "$TIMESTAMP" "bucket-create" "✅ Created bucket $DEPLOY_BUCKET - DELETE_DATE: $DELETE_DATE for deployment" "success" \
-	    || log_action "$TIMESTAMP" "bucket-create" "❌ Failed to create deployment bucket $DEPLOY_BUCKET" "fail"
-	  sleep_random 10 20
-        fi
+	local BUCKETS=$(oci os bucket list --compartment-id "$TENANCY_OCID" \
+	    --query "data[].name" --raw-output)
+
+	local ACTION=$((RANDOM % 2))
+ 
+	local BUCKET_COUNT=$(echo "$BUCKETS" | grep -c '"')
+	
+	if [[ "$ACTION" -eq 0 && -n "$BUCKETS" && "$BUCKET_COUNT" -gt 0 ]]; then
+		local ITEMS=$(echo "$BUCKETS" | grep -o '".*"' | tr -d '"')
+		readarray -t BUCKET_ARRAY <<< "$ITEMS"
+		local RANDOM_INDEX=$(( RANDOM % ${#BUCKET_ARRAY[@]} ))
+		DEPLOY_BUCKET="${BUCKET_ARRAY[$RANDOM_INDEX]}"
+		log_action "$TIMESTAMP" "bucket-deploy" "🎯 Selected 1 random bucket out of $BUCKET_COUNT: $DEPLOY_BUCKET" "info"
+	else
+		ensure_namespace_auto
+		ensure_tag "auto-delete" "Mark for auto deletion"
+		ensure_tag "auto-delete-date" "Scheduled auto delete date"
+		PREFIXES=(deploy-artifacts deployment-store deploy-backup pipeline-output \
+			  release-bucket release-artifacts staging-artifacts prod-deployments \
+			  ci-output dev-pipeline test-release build-cache image-artifacts \
+			  lambda-packages terraform-output cloud-functions deploy-packages \
+			  versioned-deployments rollout-bucket rollout-stage canary-release \
+			  bucket-publish artifact-store artifact-cache pipeline-cache \
+			  runner-output build-output compiled-assets serverless-artifacts \
+			  docker-artifacts lambda-layers deploy-bundles snapshot-deployments \
+			  build-assets frontend-deployments backend-deployments job-exports \
+			  release-builds ci-cd-deployments test-results pre-release-assets \
+			  app-deployments versioned-assets binary-packages packaged-artifacts \
+			  auto-deploy-bucket update-channel main-release fallback-release \
+			  qa-deployments nightly-builds weekly-rollouts docker-deploy-bucket \
+			  hotfix-releases release-staging release-dev release-prod \
+			  final-artifacts build-binaries compiled-code static-deploy \
+			  public-deployments internal-deployments config-packages patch-deploy \
+			  zero-downtime-deployments bucket-versioning beta-release \
+			  ci-bucket test-bucket dev-bucket prod-bucket sandbox-deployments \
+			  published-packages oci-deployments dist-folder dist-bucket \
+			  npm-artifacts python-packages maven-deploys go-binaries \
+			  helm-charts k8s-manifests manifests-bucket image-layers \
+			  gitops-bucket registry-export terraform-state bucket-rollout \
+			  changelog-storage changelog-releases milestone-artifacts \
+			  deploy-metadata service-manifests update-pipeline release-summary)
+	   
+		NAME_PREFIX=$(shuf -n 1 -e "${PREFIXES[@]}")
+	   
+		DEPLOY_BUCKET="${NAME_PREFIX}-$(date +%Y%m%d)-$(openssl rand -hex 2)"
+		
+		DELETE_DATE=$(date +%Y-%m-%d --date="+$((5 + RANDOM % 11)) days") # 5–15 days
+		
+		oci os bucket create \
+		    --name "$DEPLOY_BUCKET" \
+		    --compartment-id "$TENANCY_OCID" \
+		    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+		    && log_action "$TIMESTAMP" "bucket-deploy" "✅ Created new bucket: $DEPLOY_BUCKET (auto-delete: $DELETE_DATE)" "success" \
+		    || log_action "$TIMESTAMP" "bucket-deploy" "❌ Failed to create bucket: $DEPLOY_BUCKET" "fail"
+		
+		sleep_random 10 20
+	fi
+ 
  	# Create simulated project files
  	generate_fake_project_files
  	# Archive it

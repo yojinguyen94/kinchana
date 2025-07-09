@@ -550,6 +550,15 @@ job4_cleanup_bucket() {
                 sleep_random 10 20
               done
               sleep_random 10 20
+	      
+              PAR_LIST=$(oci os preauth-request list --bucket-name "$b" --query 'data[].id' --raw-output)
+              for obj in $(parse_json_array_string "$PAR_LIST"); do
+                oci os preauth-request delete --bucket-name "$b" --par-id "$obj" --force \
+                  && log_action "$TIMESTAMP" "bucket-delete-par" "✅ Deleted "$obj" from $b" "success" \
+                  || log_action "$TIMESTAMP" "bucket-delete-par" "❌ Failed to delete "$obj" from $b" "fail"
+                sleep_random 10 20
+              done
+
               oci os bucket delete --bucket-name "$b" --force \
                 && log_action "$TIMESTAMP" "bucket-delete" "✅ Deleted expired bucket $b (expired: $DELETE_DATE)" "success" \
                 || log_action "$TIMESTAMP" "bucket-delete" "❌ Failed to delete bucket $b (expired: $DELETE_DATE)" "fail"

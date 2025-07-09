@@ -1150,6 +1150,7 @@ job15_create_dynamic_group() {
 	    --name "$DG_NAME" \
 	    --description "$DESCRIPTION" \
      	    --defined-tags '{"auto":{"auto-delete":"true","auto-delete-date":"'"$DELETE_DATE"'"}}' \
+	    --region "$HOME_REGION" \
 	    --matching-rule "$RULE"; then
 	    log_action "$TIMESTAMP" "$JOB_NAME" "✅ Created dynamic group '$DG_NAME' with purpose '$PURPOSE'" "success"
 	  else

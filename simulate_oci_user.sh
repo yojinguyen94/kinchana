@@ -1283,7 +1283,7 @@ job18_delete_autonomous_db() {
         	DELETE_DATE=$(oci db autonomous-database get --autonomous-database-id "$ITEM_ID" \
           	--query "data.\"defined-tags\".auto.\"auto-delete-date\"" \
           	--raw-output 2>/dev/null)
-        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$NOW" +%s) && $((RANDOM % 2)) -eq 0 ]]; then
+        	if [[ -n "$DELETE_DATE" && $(date -d "$DELETE_DATE" +%s) -lt $(date -d "$NOW" +%s) ]]; then
           		sleep_random 10 20
 	    		if oci db autonomous-database delete --autonomous-database-id "$ITEM_ID" --force; then
 			    log_action "$TIMESTAMP" "delete-autonomous-db" "✅ Deleted autonomous db $ITEM_NAME (expired: $DELETE_DATE)" "success"

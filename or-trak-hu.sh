@@ -387,7 +387,7 @@ fi
 
 maxsize_restarted_threads=()
 maxsize_number_restarted=0
-maxsize_limit=850
+maxsize_limit=800
 
 echo "🔍 Scanning uam for size greater than ${maxsize_limit}MB..."
 

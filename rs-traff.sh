@@ -4,7 +4,7 @@ echo $nowDate
 
 hour=$(date +%H)
 minute=$(date +%M)
-
+sudo chmod 777 /var/run/docker.sock
 if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "12" || "$hour" == "16" || "$hour" == "00" ) ]]; then
       echo "Restarting traffmonetizer & earnfm & repocket ..."
       docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")

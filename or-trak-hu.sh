@@ -261,7 +261,7 @@ for val in $allthreads; do
     container_uptime=$(docker ps -f name="^${container_name}$" --format "{{.Status}}" | sed 's/Up //')
     if [ $(docker logs $container_name --tail 500 2>&1 | grep -i "Error! System clock seems incorrect" | wc -l) -eq 1 ]; then 
         tele_message="$container_name - Uptime: $container_uptime - Error! System clock seems incorrect"
-        if [[ $cpu_cores -le 8 ]]; then
+        if [[ $cpu_cores -le 48 ]]; then
           sudo docker rm -f $container_name
           sudo rm -rf /opt/uam_data/$container_name
           echo -e "${RED}Remove: $tele_message${NC}"

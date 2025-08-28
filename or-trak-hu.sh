@@ -140,6 +140,11 @@ if [[ $cpu_cores -eq 48 ]]; then
     done
 fi
 
+if [[ $cpu_cores -eq 16 ]]; then
+    sudo docker rm -f uam_6
+    sudo rm -rf /opt/uam_data/uam_6
+fi
+
 # Display the results
 echo "System Information:"
 echo "----------------------------"

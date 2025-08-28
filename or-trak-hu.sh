@@ -132,19 +132,6 @@ if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "1
     fi
 fi
 
-if [[ $cpu_cores -eq 48 ]]; then
-    for i in $(seq 12 14); do
-      echo "Removing container: uam_$i"
-      sudo docker rm -f uam_$i
-      sudo rm -rf /opt/uam_data/uam_$i
-    done
-fi
-
-if [[ $cpu_cores -eq 16 ]]; then
-    sudo docker rm -f uam_6
-    sudo rm -rf /opt/uam_data/uam_6
-fi
-
 # Display the results
 echo "System Information:"
 echo "----------------------------"

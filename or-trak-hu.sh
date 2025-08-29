@@ -283,7 +283,7 @@ for val in $threads; do
     echo "Last block of $container_name: $lastblock"
     if [ -z "$lastblock" ]; then 
         tele_message="$container_name - Uptime: $container_uptime - Not activated after 40 hours"
-        if [[ $cpu_cores -le 8 ]]; then
+        if [[ $cpu_cores -le 48 ]]; then
           sudo docker rm -f $container_name
           sudo rm -rf /opt/uam_data/$container_name
           echo -e "${RED}Remove: $tele_message${NC}"

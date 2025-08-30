@@ -16,7 +16,7 @@ echo "grub-pc grub-pc/postrm_purge boolean false" | sudo debconf-set-selections
 echo "grub-efi grub-efi/install_devices multiselect /dev/sda15" | sudo debconf-set-selections
 sudo apt update
 sudo DEBIAN_FRONTEND=noninteractive apt full-upgrade -y
-sudo apt install nload && sudo apt install mc -y && sudo apt install docker.io -y && sudo apt install nload && sudo apt install cbm -y && sudo apt install ethtool -y
+sudo apt install nload && sudo apt install mc -y && sudo apt install docker.io -y && sudo apt install nload && sudo apt install cbm -y && sudo apt install ethtool -y && sudo apt install docker-compose -y
 echo "miniupnpd miniupnpd/start_daemon boolean true" | sudo debconf-set-selections
 echo "miniupnpd miniupnpd/listen string docker0" | sudo debconf-set-selections
 echo "miniupnpd miniupnpd/iface string $net" | sudo debconf-set-selections

@@ -9,7 +9,7 @@ sudo iptables -A OUTPUT -p all -j ACCEPT
 sudo iptables -A InstanceServices -p all -j ACCEPT
 net=$(ip link show | awk -F: '/^[0-9]+:/ {print $2}' | tr -d ' ' | grep -v '^lo$' | head -n1)
 
-if [[ -z "$net" ]]; then
+if [ -z "$net" ]; then
     echo "No network interface found."
     exit 1
 else

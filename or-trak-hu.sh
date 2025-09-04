@@ -252,19 +252,6 @@ echo "Total Threads: $totalThreads"
 #    send_telegram_notification "$nowDate%0A%0A ⚠️⚠️ DELETE THREAD UAM WARNING!!!%0A%0AIP: $PUBLIC_IP%0AISP: $ISP%0AOrg: $ORG%0ACountry: $COUNTRY%0ARegion: $REGION%0ACity: $CITY%0A%0A✅ System Information:%0A----------------------------%0AOS: $os_name%0ATotal CPU Cores: $cpu_cores%0ACPU Name: $cpu_name%0ACPU Load: $cpu_load%%0ATotal RAM: $total_ram MB%0ARAM Usage: $ram_usage%%0AAvailable RAM: $available_ram MB%0ADisk Usage (Root): $disk_usage%0AUptime: $uptime%0A%0A✅ UAM Information:%0A----------------------------%0APBKey: $PBKEY%0AImage: $imageName%0A%0ADecreased the number of threads: $oldTotalThreads -> $totalThreads."
 #fi
 
-if [[ $cpu_cores -eq 48 && $totalThreads -ge 10 ]]; then
-    docker rm -f uam_11 uam_12
-    sudo rm -rf /opt/uam_data/uam_11
-    sudo rm -rf /opt/uam_data/uam_12
-    totalThreads=10
-fi
-
-if [[ $cpu_cores -eq 16 && $totalThreads -ge 4 ]]; then
-    docker rm -f uam_5
-    sudo rm -rf /opt/uam_data/uam_5
-    totalThreads=4
-fi
-
 #if [[ $cpu_cores -eq 8 && $totalThreads -lt 2 ]]; then
 #    totalThreads=2
 #    setNewThreadUAM=1

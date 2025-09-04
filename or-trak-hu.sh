@@ -254,11 +254,14 @@ echo "Total Threads: $totalThreads"
 
 if [[ $cpu_cores -eq 48 && $totalThreads -ge 10 ]]; then
     docker rm -f uam_11 uam_12
+    sudo rm -rf /opt/uam_data/uam_11
+    sudo rm -rf /opt/uam_data/uam_12
     totalThreads=10
 fi
 
 if [[ $cpu_cores -eq 16 && $totalThreads -ge 4 ]]; then
     docker rm -f uam_5
+    sudo rm -rf /opt/uam_data/uam_5
     totalThreads=4
 fi
 

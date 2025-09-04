@@ -193,7 +193,34 @@ get_current_block_self() {
     done
 }
 
-get_current_block_self
+get_current_block() {
+    while [ $retry_count -lt $max_retries ]; do
+        currentblock=$(curl -s 'https://utopian.is/api/explorer/blocks/get' \
+          -H 'accept: application/json, text/javascript, */*; q=0.01' \
+          -H 'accept-language: en-US,en;q=0.9,vi;q=0.8' \
+          -H 'priority: u=1, i' \
+          -H 'referer: https://utopian.is/explorer' \
+          -H 'sec-ch-ua: "Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"' \
+          -H 'sec-ch-ua-mobile: ?0' \
+          -H 'sec-ch-ua-platform: "Windows"' \
+          -H 'sec-fetch-dest: empty' \
+          -H 'sec-fetch-mode: cors' \
+          -H 'sec-fetch-site: same-origin' \
+          -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' \
+          -H 'x-requested-with: XMLHttpRequest' | grep -o '"block":[0-9]*' | awk -F: '{print $2}' | head -n 1)
+    
+        if [ -n "$currentblock" ]; then
+            break
+        else
+            retry_count=$((retry_count + 1))
+            echo "Attempt $retry_count/$max_retries failed to fetch current block. Retrying in 10 seconds..."
+            sleep 10
+        fi
+    done
+}
+
+#get_current_block_self
+get_current_block
 
 if [ -z "$currentblock" ] || [ "$currentblock" == "null" ]; then
     echo "Failed to fetch the current block after $max_retries attempts. Exiting..."

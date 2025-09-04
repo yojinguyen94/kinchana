@@ -172,7 +172,7 @@ get_current_block_self() {
         fromBlock=184846
     fi
     while [ $retry_count -lt $max_retries ]; do
-        currentblock=$(curl -s -X POST http://138.2.128.87:22825/api/1.0 \
+        currentblock=$(curl -s -X POST http://84.8.121.24:22825/api/1.0 \
             -H "Content-Type: application/json" \
             -d '{
                 "method": "getMiningBlocksWithTreasury",
@@ -219,8 +219,8 @@ get_current_block() {
     done
 }
 
-#get_current_block_self
-get_current_block
+get_current_block_self
+#get_current_block
 
 if [ -z "$currentblock" ] || [ "$currentblock" == "null" ]; then
     echo "Failed to fetch the current block after $max_retries attempts. Exiting..."

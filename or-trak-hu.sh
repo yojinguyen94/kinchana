@@ -451,7 +451,7 @@ if [ "$setNewThreadUAM" -gt 0 ] || [ ${#restarted_threads[@]} -gt 0 || [ ${#maxs
     install_uam $totalThreads $PBKEY
 fi
 
-#if [[ "$setNewThreadUAM" -gt 0 ]] || ([[ "$cpu_cores" -le 8 ]] && [[ ${#restarted_threads[@]} -gt 0 ]]); then
+#if [[ "$setNewThreadUAM" -gt 0 ]] || ([[ "$cpu_cores" -le 8 ]] && [[ ${#restarted_threads[@]} -gt 0 ]] && [[ ${#maxsize_restarted_threads[@]} -gt 0 ]]); then
 #    install_uam "$totalThreads" "$PBKEY"
 #fi
 

@@ -416,7 +416,38 @@ install_uam() {
     echo -e "${GREEN}Installed ${total_threads} threads successfully!${NC}"
 }
 
-if [ "$setNewThreadUAM" -gt 0 ] || [ ${#restarted_threads[@]} -gt 0 ]; then
+maxsize_restarted_threads=()
+maxsize_number_restarted=0
+maxsize_limit=900
+
+echo "🔍 Scanning uam for size greater than ${maxsize_limit}MB..."
+
+while IFS='|' read -r info status; do
+    read -r id name size_raw <<< "$info"
+    size=$(echo "$size_raw" | awk '{print $1}')
+
+    if [[ "$size" =~ ^([0-9.]+)([kMG]B)$ ]]; then
+        num=${BASH_REMATCH[1]}
+        unit=${BASH_REMATCH[2]}
+
+        case "$unit" in
+            kB) size_mb=$(echo "$num / 1024" | bc -l) ;;
+            MB) size_mb=$num ;;
+            GB) size_mb=$(echo "$num * 1024" | bc -l) ;;
+        esac
+
+        cmp=$(echo "$size_mb > $maxsize_limit" | bc -l)
+        if [[ "$cmp" == "1" ]]; then
+            maxsize_restarted_threads+=("$name - Uptime: $(echo $status | sed 's/Up //') - Size: $size")
+            ((maxsize_number_restarted+=1))
+             sudo docker rm -f $name
+             sudo rm -rf /opt/uam_data/$name
+#            sudo docker restart "$id"
+        fi
+    fi
+done < <(sudo docker ps -a --size --filter ancestor="$imageName" --format '{{.ID}} {{.Names}} {{.Size}}|{{.Status}}')
+
+if [ "$setNewThreadUAM" -gt 0 ] || [ ${#restarted_threads[@]} -gt 0 || [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
     install_uam $totalThreads $PBKEY
 fi
 
@@ -424,44 +455,14 @@ fi
 #    install_uam "$totalThreads" "$PBKEY"
 #fi
 
-#maxsize_restarted_threads=()
-#maxsize_number_restarted=0
-#maxsize_limit=800
-
-#echo "🔍 Scanning uam for size greater than ${maxsize_limit}MB..."
-
-#while IFS='|' read -r info status; do
-#    read -r id name size_raw <<< "$info"
-#    size=$(echo "$size_raw" | awk '{print $1}')
-
-#    if [[ "$size" =~ ^([0-9.]+)([kMG]B)$ ]]; then
-#        num=${BASH_REMATCH[1]}
-#        unit=${BASH_REMATCH[2]}
-
-#        case "$unit" in
-#            kB) size_mb=$(echo "$num / 1024" | bc -l) ;;
-#            MB) size_mb=$num ;;
-#            GB) size_mb=$(echo "$num * 1024" | bc -l) ;;
-#        esac
-
-#        cmp=$(echo "$size_mb > $maxsize_limit" | bc -l)
-#        if [[ "$cmp" == "1" ]]; then
-#            maxsize_restarted_threads+=("$name - Uptime: $(echo $status | sed 's/Up //') - Size: $size")
-#            ((maxsize_number_restarted+=1))
-#            sudo docker restart "$id"
-#        fi
-#    fi
-#done < <(sudo docker ps -a --size --filter ancestor="$imageName" --format '{{.ID}} {{.Names}} {{.Size}}|{{.Status}}')
-
-#if [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
-#    maxsize_thread_list="$maxsize_number_restarted uam(s) due to size > ${maxsize_limit}MB:%0A"
-#    for thread in "${maxsize_restarted_threads[@]}"; do
-#        maxsize_thread_list+="📦 $thread%0A"
-#    done
+if [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
+    maxsize_thread_list="$maxsize_number_restarted uam(s) due to size > ${maxsize_limit}MB:%0A"
+    for thread in "${maxsize_restarted_threads[@]}"; do
+        maxsize_thread_list+="📦 $thread%0A"
+    done
     
-#    send_telegram_notification "$nowDate%0A%0A ⚠️ UAM SIZE ALERT!!!%0A%0AIP: $PUBLIC_IP%0AISP: $ISP%0AOrg: $ORG%0ACountry: $COUNTRY%0ARegion: $REGION%0ACity: $CITY%0A%0A✅ System Information:%0A----------------------------%0AOS: $os_name%0ATotal CPU Cores: $cpu_cores%0ACPU Name: $cpu_name%0ACPU Load: $cpu_load%%0ATotal RAM: $total_ram MB%0ARAM Usage: $ram_usage%%0AAvailable RAM: $available_ram MB%0ADisk Usage (Root): $disk_usage%0AUptime: $uptime%0A%0A✅ UAM Information:%0A----------------------------%0ACurrent Block: $currentblock%0APBKey: $PBKEY%0AImage: $imageName%0ATotal Threads: $totalThreads%0ARestarted Threads: $maxsize_number_restarted%0A$maxsize_thread_list"
-#fi
-
+    send_telegram_notification "$nowDate%0A%0A ⚠️ UAM SIZE ALERT!!!%0A%0AIP: $PUBLIC_IP%0AISP: $ISP%0AOrg: $ORG%0ACountry: $COUNTRY%0ARegion: $REGION%0ACity: $CITY%0A%0A✅ System Information:%0A----------------------------%0AOS: $os_name%0ATotal CPU Cores: $cpu_cores%0ACPU Name: $cpu_name%0ACPU Load: $cpu_load%%0ATotal RAM: $total_ram MB%0ARAM Usage: $ram_usage%%0AAvailable RAM: $available_ram MB%0ADisk Usage (Root): $disk_usage%0AUptime: $uptime%0A%0A✅ UAM Information:%0A----------------------------%0ACurrent Block: $currentblock%0APBKey: $PBKEY%0AImage: $imageName%0ATotal Threads: $totalThreads%0ARestarted Threads: $maxsize_number_restarted%0A$maxsize_thread_list"
+fi
 
 if [ ${#restarted_threads[@]} -gt 0 ]; then
     thread_list=""

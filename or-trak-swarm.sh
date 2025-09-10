@@ -231,7 +231,7 @@ fi
 echo $currentblock > lastBlock.txt
 
 echo -e "${GREEN}Current Block: $currentblock${NC}"
-block=$((currentblock - 28))
+block=$((currentblock - 30))
 totalThreads=$(docker ps | grep $imageName | wc -l)
 oldTotalThreads=$totalThreads
 setNewThreadUAM=0
@@ -445,7 +445,7 @@ while IFS='|' read -r info status; do
     fi
 done < <(sudo docker ps -a --size --filter ancestor="$imageName" --format '{{.ID}} {{.Names}} {{.Size}}|{{.Status}}')
 
-if [ "$setNewThreadUAM" -gt 0 ] || [ ${#restarted_threads[@]} -gt 0 || [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
+if [ "$setNewThreadUAM" -gt 0 ] || [ ${#restarted_threads[@]} -gt 0 ] || [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
     install_uam $totalThreads $PBKEY
 fi
 

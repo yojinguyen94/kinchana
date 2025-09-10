@@ -447,7 +447,7 @@ while IFS='|' read -r info status; do
     fi
 done < <(sudo docker ps -a --size --filter ancestor="$imageName" --format '{{.ID}} {{.Names}} {{.Size}}|{{.Status}}')
 
-if [ "$setNewThreadUAM" -gt 0 ] || [ ${#restarted_threads[@]} -gt 0 || [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
+if [ "$setNewThreadUAM" -gt 0 ] || [ ${#restarted_threads[@]} -gt 0 ] || [ ${#maxsize_restarted_threads[@]} -gt 0 ]; then
     install_uam $totalThreads $PBKEY
 fi
 

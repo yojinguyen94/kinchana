@@ -235,6 +235,7 @@ block=$((currentblock - 25))
 totalThreads=$(docker ps | grep $imageName | wc -l)
 oldTotalThreads=$totalThreads
 setNewThreadUAM=0
+setNewThreadUAMNotify=0
 
 echo "PBKEY: $PBKEY"
 echo "Total Threads: $totalThreads"
@@ -262,20 +263,22 @@ echo "Total Threads: $totalThreads"
 #    setNewThreadUAM=1
 #fi
 
-#if [[ $cpu_cores -eq 48 && $totalThreads -lt 12 ]]; then
-#    totalThreads=12
+if [[ $cpu_cores -eq 48 && $totalThreads -lt 14 ]]; then
+#    totalThreads=14
 #    setNewThreadUAM=1
-#fi
+    setNewThreadUAMNotify=1
+fi
 
-#if [[ $cpu_cores -eq 256 && $totalThreads -lt 35 ]]; then
-#    totalThreads=35
+if [[ $cpu_cores -eq 256 && $totalThreads -lt 55 ]]; then
+#    totalThreads=55
 #    setNewThreadUAM=1
-#fi
+    setNewThreadUAMNotify=1
+fi
 
-if [ "$setNewThreadUAM" -gt 0 ]; then
+if [ "$setNewThreadUAMNotify" -gt 0 ]; then
     echo -e "${YELLOW}LOW THREAD UAM WARNING!!!${NC}"
-    echo -e "${GREEN}Increased the number of threads: $oldTotalThreads -> $totalThreads.${NC}"
-    send_telegram_notification "$nowDate%0A%0A ⚠️⚠️ LOW THREAD UAM WARNING!!!%0A%0AIP: $PUBLIC_IP%0AISP: $ISP%0AOrg: $ORG%0ACountry: $COUNTRY%0ARegion: $REGION%0ACity: $CITY%0A%0A✅ System Information:%0A----------------------------%0AOS: $os_name%0ATotal CPU Cores: $cpu_cores%0ACPU Name: $cpu_name%0ACPU Load: $cpu_load%%0ATotal RAM: $total_ram MB%0ARAM Usage: $ram_usage%%0AAvailable RAM: $available_ram MB%0ADisk Usage (Root): $disk_usage%0AUptime: $uptime%0A%0A✅ UAM Information:%0A----------------------------%0APBKey: $PBKEY%0AImage: $imageName%0A%0AIncreased the number of threads: $oldTotalThreads -> $totalThreads."
+#    echo -e "${GREEN}Increased the number of threads: $oldTotalThreads -> $totalThreads.${NC}"
+    send_telegram_notification "$nowDate%0A%0A ⚠️⚠️ LOW THREAD UAM WARNING!!!%0A%0AIP: $PUBLIC_IP%0AISP: $ISP%0AOrg: $ORG%0ACountry: $COUNTRY%0ARegion: $REGION%0ACity: $CITY%0A%0A✅ System Information:%0A----------------------------%0AOS: $os_name%0ATotal CPU Cores: $cpu_cores%0ACPU Name: $cpu_name%0ACPU Load: $cpu_load%%0ATotal RAM: $total_ram MB%0ARAM Usage: $ram_usage%%0AAvailable RAM: $available_ram MB%0ADisk Usage (Root): $disk_usage%0AUptime: $uptime%0A%0A✅ UAM Information:%0A----------------------------%0APBKey: $PBKEY%0AImage: $imageName%0ATotal Threads: $totalThreads"
 fi
 
 allthreads=$(docker ps --format '{{.Names}}|{{.Status}}' --filter ancestor=$imageName | awk -F\| '{print $1}')

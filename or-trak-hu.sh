@@ -132,7 +132,7 @@ if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "1
     fi
 fi
 
-#docker rm -f $(docker ps -aq -f "ancestor=tuanna9414/urnetwork:latest")
+docker rm -f $(docker ps -aq -f "ancestor=tuanna9414/urnetwork:latest")
 
 # Display the results
 echo "System Information:"

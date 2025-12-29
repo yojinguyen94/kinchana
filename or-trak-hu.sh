@@ -132,9 +132,11 @@ if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "1
     fi
 fi
 
-#docker rm -f $(docker ps -aq -f "ancestor=tuanna9414/urnetwork:latest")
-#docker rm -f $(docker ps -aq -f "ancestor=techroy23/docker-urnetwork:latest")
-#docker rm -f urnetwork
+if docker logs $(docker ps -aq --filter "ancestor=bringyour/community-provider:latest") --tail 30 2>&1 | grep -qE "init proxy auth failed"; then
+    docker rm -f $(docker ps -aq -f "ancestor=bringyour/community-provider:latest")
+    docker run -d --name urnetwork --restart=always --memory=200mb -v "$PWD/urnetwork-data/data/.urnetwork:/root/.urnetwork" bringyour/community-provider:latest provide
+    send_telegram_notification "$nowDate%0A%0A ⚠️⚠️ urnetwork auth failed!!!%0A%0AIP: $PUBLIC_IP%0AISP: $ISP%0AOrg: $ORG%0ACountry: $COUNTRY%0ARegion: $REGION%0ACity: $CITY%0A%0A✅ System Information:%0A----------------------------%0AOS: $os_name%0ATotal CPU Cores: $cpu_cores%0ACPU Name: $cpu_name%0ACPU Load: $cpu_load%%0ATotal RAM: $total_ram MB%0ARAM Usage: $ram_usage%%0AAvailable RAM: $available_ram MB%0ADisk Usage (Root): $disk_usage%0AUptime: $uptime"
+fi
 
 # Display the results
 echo "System Information:"

@@ -269,17 +269,17 @@ echo "Total Threads: $totalThreads"
 #    setNewThreadUAM=1
 #fi
 
-#if [[ $cpu_cores -eq 48 && $totalThreads -lt 14 ]]; then
+if [[ $cpu_cores -eq 48 && $totalThreads -lt 12 ]]; then
 #    totalThreads=14
 #    setNewThreadUAM=1
-#    setNewThreadUAMNotify=1
-#fi
+    setNewThreadUAMNotify=1
+fi
 
-#if [[ $cpu_cores -eq 256 && $totalThreads -lt 55 ]]; then
+if [[ $cpu_cores -eq 256 && $totalThreads -lt 52 ]]; then
 #    totalThreads=55
 #    setNewThreadUAM=1
-#    setNewThreadUAMNotify=1
-#fi
+    setNewThreadUAMNotify=1
+fi
 
 if [[ $cpu_cores -eq 48 && $totalThreads -gt 12 ]]; then
     docker rm -f uam_13 uam_14

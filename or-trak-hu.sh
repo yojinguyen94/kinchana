@@ -269,16 +269,24 @@ echo "Total Threads: $totalThreads"
 #    setNewThreadUAM=1
 #fi
 
-if [[ $cpu_cores -eq 48 && $totalThreads -lt 14 ]]; then
+#if [[ $cpu_cores -eq 48 && $totalThreads -lt 14 ]]; then
 #    totalThreads=14
 #    setNewThreadUAM=1
-    setNewThreadUAMNotify=1
-fi
+#    setNewThreadUAMNotify=1
+#fi
 
-if [[ $cpu_cores -eq 256 && $totalThreads -lt 55 ]]; then
+#if [[ $cpu_cores -eq 256 && $totalThreads -lt 55 ]]; then
 #    totalThreads=55
 #    setNewThreadUAM=1
-    setNewThreadUAMNotify=1
+#    setNewThreadUAMNotify=1
+#fi
+
+if [[ $cpu_cores -eq 48 && $totalThreads -gt 12 ]]; then
+    docker rm -f uam_13 uam_14
+fi
+
+if [[ $cpu_cores -eq 256 && $totalThreads -gt 50 ]]; then
+    docker rm -f uam_55 uam_54 uam_53 uam_52 uam_51
 fi
 
 if [ "$setNewThreadUAMNotify" -gt 0 ]; then

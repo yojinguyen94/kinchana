@@ -275,11 +275,11 @@ if [[ $cpu_cores -eq 48 && $totalThreads -lt 12 ]]; then
     setNewThreadUAMNotify=1
 fi
 
-#if [[ $cpu_cores -eq 256 && $totalThreads -lt 50 ]]; then
-#    totalThreads=50
-#    setNewThreadUAM=1
-#    setNewThreadUAMNotify=1
-#fi
+if [[ $cpu_cores -eq 256 && $totalThreads -lt 47 ]]; then
+    totalThreads=47
+    setNewThreadUAM=1
+    setNewThreadUAMNotify=1
+fi
 
 #if [[ $cpu_cores -eq 48 && $totalThreads -gt 10 ]]; then
 #    docker rm -f uam_13 uam_14 uam_12 uam_11

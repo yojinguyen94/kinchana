@@ -275,8 +275,8 @@ if [[ $cpu_cores -eq 48 && $totalThreads -lt 12 ]]; then
     setNewThreadUAMNotify=1
 fi
 
-if [[ $cpu_cores -eq 256 && $totalThreads -lt 50 ]]; then
-    totalThreads=50
+if [[ $cpu_cores -eq 256 && $totalThreads -lt 52 ]]; then
+    totalThreads=52
     setNewThreadUAM=1
     setNewThreadUAMNotify=1
 fi

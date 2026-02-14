@@ -276,8 +276,8 @@ echo "Total Threads: $totalThreads"
 #fi
 
 if [[ $cpu_cores -eq 256 && $totalThreads -lt 55 ]]; then
-    totalThreads=55
-    setNewThreadUAM=1
+#    totalThreads=55
+#    setNewThreadUAM=1
     setNewThreadUAMNotify=1
 fi
 

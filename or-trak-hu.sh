@@ -287,7 +287,7 @@ fi
 #fi
 
 if [[ $cpu_cores -eq 256 && $totalThreads -gt 50 ]]; then
-    docker rm -f uam_55 uam_54 uam_53 uam_52 uam_51
+    docker rm -f uam_57 uam_56 uam_55 uam_54 uam_53 uam_52 uam_51
     totalThreads=50
 fi
 

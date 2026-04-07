@@ -225,8 +225,8 @@ get_current_block() {
     done
 }
 
-get_current_block_self
-#get_current_block
+#get_current_block_self
+get_current_block
 
 if [ -z "$currentblock" ] || [ "$currentblock" == "null" ]; then
     echo "Failed to fetch the current block after $max_retries attempts. Exiting..."

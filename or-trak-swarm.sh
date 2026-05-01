@@ -115,20 +115,16 @@ uptime=$(uptime -p | sed 's/up //')
 hour=$(date +%H)
 minute=$(date +%M)
 
-if docker logs $(docker ps -aq --filter "ancestor=packetshare/packetshare:latest") --tail 30 2>&1 | grep -qE "Your device limit has been reached|Device amounts exceed"; then
-    echo "❌ Packetshare device limit has been exceeded!"
-    docker rm -f $(docker ps -aq -f "ancestor=packetshare/packetshare:latest")
-else
-    echo "✅ Packetshare is not encountering any device limit errors."
-fi
-
 if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "12" || "$hour" == "16" || "$hour" == "00" ) ]]; then
     if [[ $cpu_cores -le 8 ]]; then
-        echo "Restarting traffmonetizer & earnfm ..."
-        docker restart $(docker ps -aq -f "ancestor=traffmonetizer/cli_v2")
-        docker restart $(docker ps -aq -f "ancestor=earnfm/earnfm-client:latest")
-        docker run -it -d --name traffmonetizer --restart always --memory=100mb traffmonetizer/cli_v2 start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI=
-        docker run -d --name earnfm --restart=always --memory=100mb -e EARNFM_TOKEN="4d45663a-5f9a-46ff-9efe-390cc4b9f3cc" earnfm/earnfm-client:latest
+        echo "Restarting traffmonetizer"
+        IMAGETRAFF="traffmonetizer/cli_v2"
+        containerstraff=$(docker ps -a --filter "ancestor=$IMAGETRAFF" -q)
+        if [ -n "$containerstraff" ]; then
+            docker restart $containerstraff
+        else
+            docker run -it -d --name traffmonetizer --restart always --memory=100mb $IMAGETRAFF start accept --token ZDlwgs1MNS7yUh2o2Bv7VeLJCAebJvUiicrxAnH1jXI
+        fi
     fi
 fi
 

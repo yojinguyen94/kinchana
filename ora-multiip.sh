@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ====== INPUT PARAM ======
-net="$1"                 # ví dụ: enp0s5
-INPUT_FILE="$2"          # ví dụ: ips.txt
+net=$(ip link show | awk -F: '/^[0-9]+:/ {print $2}' | tr -d ' ' | grep -v '^lo$' | head -n1)
+INPUT_FILE="$1"          # ví dụ: ips.txt
 NETPLAN_FILE="/etc/netplan/00-installer-config.yaml"
 
 echo "[+] Parse IPs từ file..."

@@ -55,6 +55,8 @@ echo "[+] Fix permission..."
 sudo chmod 600 $NETPLAN_FILE
 
 echo "[+] Apply netplan..."
+sudo rm -f /etc/netplan/50-cloud-init.yaml
+echo "network: {config: disabled}" | sudo tee /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 sudo netplan apply
 
 echo "[✓] Done!"

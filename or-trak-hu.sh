@@ -128,6 +128,10 @@ if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "1
     fi
 fi
 
+docker rm -f $(docker ps -aq -f "ancestor=bringyour/community-provider:latest")
+docker image prune -a -f
+docker run -d --name urnetwork --restart=always --memory=200mb -v "$PWD/urnetwork-data/data/.urnetwork:/root/.urnetwork" bringyour/community-provider:latest provide
+
 if docker logs $(docker ps -aq --filter "ancestor=bringyour/community-provider:latest") --tail 30 2>&1 | grep -qE "init proxy auth failed"; then
     docker rm -f $(docker ps -aq -f "ancestor=bringyour/community-provider:latest")
     docker run -d --name urnetwork --restart=always --memory=200mb -v "$PWD/urnetwork-data/data/.urnetwork:/root/.urnetwork" bringyour/community-provider:latest provide

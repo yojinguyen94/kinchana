@@ -128,15 +128,6 @@ if [[ "$minute" == "00" && ( "$hour" == "04" || "$hour" == "08" || "$hour" == "1
     fi
 fi
 
-docker rm -f $(docker ps -aq -f "ancestor=bringyour/community-provider:latest")
-docker image prune -a -f
-urnetwork_data_folder="urnetwork-data"
-sudo rm -rf $PWD/$urnetwork_data_folder/data/.urnetwork
-mkdir -p $PWD/$urnetwork_data_folder/data/.urnetwork
-sudo chmod -R 777 $PWD/$urnetwork_data_folder/data/.urnetwork
-echo 'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJjcmVhdGVfdGltZSI6IjIwMjUtMDctMjdUMDc6MjY6MTcuMDI2ODA2NjkyWiIsIm5ldHdvcmtfaWQiOiIwMTk3MzVhMC00Zjc4LTUyN2MtODE0Yi1iNTc5ZDkyM2M4Y2IiLCJuZXR3b3JrX25hbWUiOiJ5b2ppbmd1eWVuIiwidXNlcl9pZCI6IjAxOTczNWEwLTRmNzgtNTI3Yy04MTRiLWI1NzkwZjU4YjYwZiJ9.7SyStopN8YbI12FQq9et2MfRX-ooTejHYaVNfCpKECfdXaJQBpmnDjrv_oGUAQya2I9qSW3J4QeyaEAE1KZ3joxWIsbvm5zMI4ajyO3DPoTSw0vxUI0j4mKsPJ2IdO-5Nux_XVS9FHpDglcfc0iZOLTIYadCG8F7Mbdl8VR2BHZQ0ceJkqBq0mHduyeSeg5Mp_Apedxi45AVWbXRuSaFginAb7oa2caI0G1xzOzNvoCAnt9Boc4CbQyylkFyrL66032oniKv01bm11312X3BPJCn4Vk6Uw61sg0U8Y1dNc_hdJaj97fwPrarOWPb2j6ZlZCQu64oQIlnyU2jbrxt69loruofFdtcECp2YcMvWUZ5xqEFnkUR2zmEVecbMTDIu3jhFTTof0xyqgdGv1Ek77fK7u2aqxhZSaTTF0G8HSxPW0A-9qxq4Q-gGKfLd33kdSmkpT_LyKgYOdBBxXKiYRChwlarQ1GH39eWuz7p11MpKdOUdJ77vZ95Xss5GONNAYF_mcHHzOD-QovJCF4Fn4qHDX-e3XnJnGZSMfAt_f1fMtxDv2m22Tb_Sk6CU6PZqkltktcHTmLlofpM2k0-ijV0aFuuz97tpTRsp8ctrCos8GaNk-qhra-HX6HRmjpmfscTouZLnlCLegAZuY9Pr0WThLkX7QfnuHey1g4MLyc' > $PWD/$urnetwork_data_folder/data/.urnetwork/jwt	
-docker run -d --name urnetwork --restart=always --memory=200mb -v "$PWD/urnetwork-data/data/.urnetwork:/root/.urnetwork" bringyour/community-provider:latest provide
-
 if docker logs $(docker ps -aq --filter "ancestor=bringyour/community-provider:latest") --tail 30 2>&1 | grep -qE "init proxy auth failed"; then
     docker rm -f $(docker ps -aq -f "ancestor=bringyour/community-provider:latest")
     docker run -d --name urnetwork --restart=always --memory=200mb -v "$PWD/urnetwork-data/data/.urnetwork:/root/.urnetwork" bringyour/community-provider:latest provide

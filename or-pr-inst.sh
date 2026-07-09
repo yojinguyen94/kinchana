@@ -1,4 +1,5 @@
 #!/bin/bash
+#for ubuntu 20
 # Get the first non-loopback interface
 net=$(ip link show | awk -F: '/^[0-9]+:/ {print $2}' | tr -d ' ' | grep -v '^lo$' | head -n1)
 

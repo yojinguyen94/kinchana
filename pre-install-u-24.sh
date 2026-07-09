@@ -1,8 +1,9 @@
-#!/bin/sh
+#!/bin/bash
+#for ubuntu 24
 export NEEDRESTART_MODE=l
 export DEBIAN_FRONTEND=noninteractive
 sudo apt update
-if ! command -v docker >/dev/null 2>&1; then
+if ! command -v docker &>/dev/null; then
     sudo apt-get install -y docker.io
 fi
 sudo apt install nload && sudo sed -ie 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1'/g /etc/sysctl.conf && sudo sysctl --system && sudo apt install docker-compose -y
@@ -14,7 +15,7 @@ sudo iptables -A OUTPUT -p all -j ACCEPT
 sudo iptables -A InstanceServices -p all -j ACCEPT
 net=$(ip link show | awk -F: '/^[0-9]+:/ {print $2}' | tr -d ' ' | grep -v '^lo$' | head -n1)
 
-if [ -z "$net" ]; then
+if [[ -z "$net" ]]; then
     echo "No network interface found."
     exit 1
 else

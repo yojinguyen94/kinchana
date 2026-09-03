@@ -174,7 +174,7 @@ get_current_block_self() {
         fromBlock=184846
     fi
     while [ $retry_count -lt $max_retries ]; do
-        currentblock=$(curl -s -X POST http://206.189.199.23:22825/api/1.0 \
+        currentblock=$(curl -s -X POST http://157.230.45.47:22825/api/1.0 \
             -H "Content-Type: application/json" \
             -d '{
                 "method": "getMiningBlocksWithTreasury",
